@@ -56,18 +56,12 @@ export default function Plans() {
     if (plan) {
       initChat(planId, [
         {
-          id: 'm1',
-          sender: plan.participantNames[0] || 'Sofia',
-          text: 'Hey everyone! Excited for this.',
-          time: '10:02',
+          id: 'm_init',
+          sender: 'pace',
+          text: `Group created for "${plan.title}". Say hi to your group!`,
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
           isMe: false,
-        },
-        {
-          id: 'm2',
-          sender: plan.participantNames[1] || 'Marcus',
-          text: `${plan.suggestedTime} works great for me.`,
-          time: '10:05',
-          isMe: false,
+          isSystem: true,
         },
       ])
     }

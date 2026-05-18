@@ -97,23 +97,31 @@ export default function PlanChat() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto scrollbar-hide phone-scroll px-4 py-4 flex flex-col gap-3">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'}`}>
-            {!msg.isMe && (
-              <span className="text-pace-muted text-[11px] mb-1 ml-1">{msg.sender}</span>
-            )}
-            <div
-              className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                msg.isMe
-                  ? 'bg-pace-green text-white rounded-br-md'
-                  : 'bg-pace-card text-pace-text shadow-card rounded-bl-md'
-              }`}
-            >
-              {msg.text}
+        {messages.map((msg) =>
+          msg.isSystem ? (
+            <div key={msg.id} className="flex justify-center my-1">
+              <span className="text-pace-muted text-[11px] px-3 py-1 bg-pace-bg rounded-full border border-pace-border">
+                {msg.text}
+              </span>
             </div>
-            <span className="text-pace-muted text-[10px] mt-1 mx-1">{msg.time}</span>
-          </div>
-        ))}
+          ) : (
+            <div key={msg.id} className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'}`}>
+              {!msg.isMe && (
+                <span className="text-pace-muted text-[11px] mb-1 ml-1">{msg.sender}</span>
+              )}
+              <div
+                className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  msg.isMe
+                    ? 'bg-pace-green text-white rounded-br-md'
+                    : 'bg-pace-card text-pace-text shadow-card rounded-bl-md'
+                }`}
+              >
+                {msg.text}
+              </div>
+              <span className="text-pace-muted text-[10px] mt-1 mx-1">{msg.time}</span>
+            </div>
+          )
+        )}
         <div ref={bottomRef} />
       </div>
 
