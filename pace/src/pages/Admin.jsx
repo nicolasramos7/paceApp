@@ -65,10 +65,12 @@ export default function Admin() {
           </button>
           <div className="w-px h-5 bg-gray-200" />
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-[#7DC9A0] rounded-lg flex items-center justify-center">
-              <span className="text-white text-xs font-bold">p</span>
-            </div>
-            <span className="text-gray-900 font-semibold text-sm">pace</span>
+            <svg
+              viewBox="470 328 660 240"
+              style={{ height: 32, display: 'block', borderRadius: 6 }}
+            >
+              <image href="/pace_logo.jpg" width="1600" height="896" />
+            </svg>
             <span className="text-gray-400 text-sm">— Municipality Dashboard</span>
           </div>
         </div>
