@@ -88,7 +88,7 @@ export default function Onboarding() {
   const [dir, setDir] = useState(1)
 
   const [form, setForm] = useState({
-    email: '', password: '', firstName: '', lastName: '', gender: '',
+    email: '', password: '', confirmPassword: '', firstName: '', lastName: '', gender: '',
     age: '', country: '', town: '', zipCode: '', occupation: '',
     language: '', pets: '', interests: [],
   })
@@ -133,31 +133,43 @@ export default function Onboarding() {
     </div>,
 
     // Step 1: Account
-    <div key="account" className="flex flex-col h-full px-6 pt-2">
-      <ProgressBar step={1} />
-      <h2 className="text-pace-text font-bold text-xl mb-1">Create your account</h2>
-      <p className="text-pace-muted text-sm mb-6">Your data stays private and is never shared individually.</p>
-      <div className="flex flex-col gap-4 flex-1">
-        <Field label="Email" required>
-          <Input value={form.email} onChange={set('email')} placeholder="you@email.com" type="email" />
-        </Field>
-        <Field label="Password" required>
-          <Input value={form.password} onChange={set('password')} placeholder="At least 8 characters" type="password" />
-        </Field>
-      </div>
-      <div className="flex gap-3 pb-6">
-        <button onClick={goBack} className="w-12 h-12 rounded-xl border border-pace-border flex items-center justify-center">
-          <ChevronLeft size={20} className="text-pace-secondary" />
-        </button>
-        <button
-          onClick={goNext}
-          disabled={!form.email || !form.password}
-          className="flex-1 py-3.5 bg-pace-green text-white font-semibold rounded-xl disabled:opacity-40 transition-opacity"
-        >
-          Continue
-        </button>
-      </div>
-    </div>,
+    (() => {
+      const pwTooShort = form.password.length > 0 && form.password.length < 8
+      const pwMismatch = form.confirmPassword.length > 0 && form.password !== form.confirmPassword
+      const accountValid = form.email && form.password.length >= 8 && form.password === form.confirmPassword
+      return (
+        <div key="account" className="flex flex-col h-full px-6 pt-2">
+          <ProgressBar step={1} />
+          <h2 className="text-pace-text font-bold text-xl mb-1">Create your account</h2>
+          <p className="text-pace-muted text-sm mb-6">Your data stays private and is never shared individually.</p>
+          <div className="flex flex-col gap-4 flex-1">
+            <Field label="Email" required>
+              <Input value={form.email} onChange={set('email')} placeholder="you@email.com" type="email" />
+            </Field>
+            <Field label="Password" required>
+              <Input value={form.password} onChange={set('password')} placeholder="At least 8 characters" type="password" />
+              {pwTooShort && <p className="text-pace-rose text-xs mt-1">Password must be at least 8 characters</p>}
+            </Field>
+            <Field label="Confirm Password" required>
+              <Input value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="Repeat your password" type="password" />
+              {pwMismatch && <p className="text-pace-rose text-xs mt-1">Passwords do not match</p>}
+            </Field>
+          </div>
+          <div className="flex gap-3 pb-6">
+            <button onClick={goBack} className="w-12 h-12 rounded-xl border border-pace-border flex items-center justify-center">
+              <ChevronLeft size={20} className="text-pace-secondary" />
+            </button>
+            <button
+              onClick={goNext}
+              disabled={!accountValid}
+              className="flex-1 py-3.5 bg-pace-green text-white font-semibold rounded-xl disabled:opacity-40 transition-opacity"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )
+    })(),
 
     // Step 2: Personal
     <div key="personal" className="flex flex-col h-full px-6 pt-2 overflow-y-auto scrollbar-hide">

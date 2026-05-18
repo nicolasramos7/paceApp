@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { ChevronRight, Edit3, MapPin, Briefcase, Calendar } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronRight, Edit3, MapPin, Briefcase, Calendar, X } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import BottomNav from '../components/layout/BottomNav'
 
@@ -49,10 +49,60 @@ function BalanceBar({ label, value, color }) {
   )
 }
 
+function EditInput({ value, onChange, type = 'text', placeholder }) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full px-4 py-3 rounded-xl bg-pace-bg border border-pace-border text-pace-text text-sm placeholder-pace-muted outline-none focus:border-pace-green transition-colors"
+    />
+  )
+}
+
 export default function Profile() {
   const navigate = useNavigate()
   const user = useStore((s) => s.user)
+  const updateUser = useStore((s) => s.updateUser)
   const logs = useStore((s) => s.logs)
+
+  const [editOpen, setEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState({})
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
+  const [pwError, setPwError] = useState('')
+  const [pwSaved, setPwSaved] = useState(false)
+
+  const openEdit = () => {
+    setEditForm({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      town: user.town || '',
+      country: user.country || '',
+    })
+    setPw({ current: '', next: '', confirm: '' })
+    setPwError('')
+    setPwSaved(false)
+    setEditOpen(true)
+  }
+
+  const setField = (field) => (val) => setEditForm((f) => ({ ...f, [field]: val }))
+
+  const saveProfile = () => {
+    updateUser(editForm)
+    setEditOpen(false)
+  }
+
+  const savePassword = () => {
+    if (pw.current !== user.password) { setPwError('Current password is incorrect'); return }
+    if (pw.next.length < 8) { setPwError('New password must be at least 8 characters'); return }
+    if (pw.next !== pw.confirm) { setPwError('New passwords do not match'); return }
+    updateUser({ password: pw.next })
+    setPw({ current: '', next: '', confirm: '' })
+    setPwError('')
+    setPwSaved(true)
+  }
 
   const latestLog = Object.values(logs).sort((a, b) => b.date - a.date)[0] || {}
   const balance = latestLog.activityBalance || {}
@@ -68,12 +118,12 @@ export default function Profile() {
   const hasBalance = Object.keys(balance).length > 0
 
   return (
-    <div className="flex flex-col h-full bg-pace-bg">
+    <div className="flex flex-col h-full bg-pace-bg relative overflow-hidden">
       <div className="flex-1 overflow-y-auto scrollbar-hide phone-scroll pb-4">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
           <h1 className="text-pace-text text-2xl font-bold">Profile</h1>
-          <button className="w-9 h-9 bg-pace-card rounded-xl shadow-card flex items-center justify-center">
+          <button onClick={openEdit} className="w-9 h-9 bg-pace-card rounded-xl shadow-card flex items-center justify-center">
             <Edit3 size={16} className="text-pace-secondary" />
           </button>
         </div>
@@ -183,6 +233,101 @@ export default function Profile() {
       </div>
 
       <BottomNav />
+
+      {/* Edit account bottom sheet */}
+      <AnimatePresence>
+        {editOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/30 z-10"
+              onClick={() => setEditOpen(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="absolute bottom-0 left-0 right-0 bg-pace-bg rounded-t-3xl z-20 max-h-[85%] flex flex-col"
+            >
+              {/* Handle + header */}
+              <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-pace-border flex-shrink-0">
+                <h3 className="text-pace-text font-semibold text-base">Edit account</h3>
+                <button onClick={() => setEditOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-pace-card">
+                  <X size={16} className="text-pace-secondary" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto scrollbar-hide px-6 py-4 flex flex-col gap-5">
+                {/* Profile info */}
+                <div className="flex flex-col gap-3">
+                  <p className="text-pace-muted text-xs font-medium uppercase tracking-widest">Profile</p>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <p className="text-pace-muted text-xs mb-1">First name</p>
+                      <EditInput value={editForm.firstName} onChange={setField('firstName')} placeholder="First name" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-pace-muted text-xs mb-1">Last name</p>
+                      <EditInput value={editForm.lastName} onChange={setField('lastName')} placeholder="Last name" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-pace-muted text-xs mb-1">Email</p>
+                    <EditInput value={editForm.email} onChange={setField('email')} placeholder="Email" type="email" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <p className="text-pace-muted text-xs mb-1">Town</p>
+                      <EditInput value={editForm.town} onChange={setField('town')} placeholder="Town" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-pace-muted text-xs mb-1">Country</p>
+                      <EditInput value={editForm.country} onChange={setField('country')} placeholder="Country" />
+                    </div>
+                  </div>
+                  <button
+                    onClick={saveProfile}
+                    className="w-full py-3 bg-pace-green text-white text-sm font-semibold rounded-xl active:opacity-80 transition-opacity"
+                  >
+                    Save changes
+                  </button>
+                </div>
+
+                {/* Password change */}
+                <div className="flex flex-col gap-3">
+                  <p className="text-pace-muted text-xs font-medium uppercase tracking-widest">Change password</p>
+                  <div>
+                    <p className="text-pace-muted text-xs mb-1">Current password</p>
+                    <EditInput value={pw.current} onChange={(v) => { setPw((p) => ({ ...p, current: v })); setPwSaved(false); setPwError('') }} placeholder="Enter current password" type="password" />
+                  </div>
+                  <div>
+                    <p className="text-pace-muted text-xs mb-1">New password</p>
+                    <EditInput value={pw.next} onChange={(v) => { setPw((p) => ({ ...p, next: v })); setPwSaved(false); setPwError('') }} placeholder="At least 8 characters" type="password" />
+                  </div>
+                  <div>
+                    <p className="text-pace-muted text-xs mb-1">Confirm new password</p>
+                    <EditInput value={pw.confirm} onChange={(v) => { setPw((p) => ({ ...p, confirm: v })); setPwSaved(false); setPwError('') }} placeholder="Repeat new password" type="password" />
+                  </div>
+                  {pwError && <p className="text-pace-rose text-xs">{pwError}</p>}
+                  {pwSaved && <p className="text-pace-green text-xs">Password updated successfully</p>}
+                  <button
+                    onClick={savePassword}
+                    disabled={!pw.current || !pw.next || !pw.confirm}
+                    className="w-full py-3 bg-pace-text text-white text-sm font-semibold rounded-xl disabled:opacity-40 active:opacity-80 transition-opacity"
+                  >
+                    Update password
+                  </button>
+                </div>
+
+                <div className="pb-4" />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
