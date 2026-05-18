@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Edit3, MapPin, Briefcase, Calendar, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import BottomNav from '../components/layout/BottomNav'
 import SearchableSelect from '../components/ui/SearchableSelect'
-import { COUNTRIES, LANGUAGES, INTERESTS } from '../data/options'
+import { COUNTRIES, COUNTRY_CODES, LANGUAGES, INTERESTS } from '../data/options'
 
 const INTEREST_COLORS = {
   Walking: '#7DC9A0', Hiking: '#7DC9A0', Gym: '#F2A0AE', Running: '#F2A0AE',
@@ -110,6 +110,32 @@ export default function Profile() {
   const [pwError, setPwError] = useState('')
   const [pwSaved, setPwSaved] = useState(false)
   const [ageTouched, setAgeTouched] = useState(false)
+  const [zipStatus, setZipStatus] = useState('idle') // idle | checking | valid | invalid | unsupported
+  const [zipPlace, setZipPlace] = useState('')
+
+  useEffect(() => {
+    const code = COUNTRY_CODES[editForm.country]
+    if (!editForm.zipCode || !editForm.country) { setZipStatus('idle'); setZipPlace(''); return }
+    if (!code) { setZipStatus('unsupported'); setZipPlace(''); return }
+
+    setZipStatus('checking')
+    setZipPlace('')
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://api.zippopotam.us/${code}/${editForm.zipCode}`)
+        if (res.ok) {
+          const data = await res.json()
+          setZipPlace(data.places?.[0]?.['place name'] || '')
+          setZipStatus('valid')
+        } else {
+          setZipStatus('invalid')
+        }
+      } catch {
+        setZipStatus('idle')
+      }
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [editForm.country, editForm.zipCode])
 
   const openEdit = () => {
     setEditForm({
@@ -129,6 +155,8 @@ export default function Profile() {
     setPwError('')
     setPwSaved(false)
     setAgeTouched(false)
+    setZipStatus('idle')
+    setZipPlace('')
     setEditOpen(true)
   }
 
@@ -300,7 +328,27 @@ export default function Profile() {
                 {/* ── Location ── */}
                 <SectionHeader title="Location" />
                 <ESearchable label="Country" value={editForm.country} onChange={sf('country')} options={COUNTRIES} placeholder="Search your country" />
-                <EInput label="ZIP Code" value={editForm.zipCode} onChange={sf('zipCode')} placeholder="Postal code" />
+                <div>
+                  <p className="text-pace-muted text-xs mb-1">ZIP Code</p>
+                  <input
+                    value={editForm.zipCode}
+                    onChange={(e) => sf('zipCode')(e.target.value)}
+                    placeholder="Postal code"
+                    className="w-full px-4 py-3 rounded-xl bg-pace-bg border border-pace-border text-pace-text text-sm placeholder-pace-muted outline-none focus:border-pace-green transition-colors"
+                  />
+                  {zipStatus === 'checking' && (
+                    <p className="text-pace-muted text-xs mt-1 flex items-center gap-1">
+                      <span className="inline-block w-3 h-3 border border-pace-muted border-t-transparent rounded-full animate-spin" />
+                      Verifying…
+                    </p>
+                  )}
+                  {zipStatus === 'valid' && (
+                    <p className="text-pace-green text-xs mt-1">✓ {zipPlace || 'Valid postcode'}</p>
+                  )}
+                  {zipStatus === 'invalid' && (
+                    <p className="text-pace-rose text-xs mt-1">ZIP code not found in {editForm.country}</p>
+                  )}
+                </div>
 
                 {/* ── Optional ── */}
                 <SectionHeader title="More about you" />
@@ -334,7 +382,7 @@ export default function Profile() {
                 {/* Save */}
                 <button
                   onClick={saveProfile}
-                  disabled={!!ageInvalid}
+                  disabled={!!ageInvalid || zipStatus === 'invalid' || zipStatus === 'checking'}
                   className="mt-2 w-full py-3.5 bg-pace-green text-white text-sm font-semibold rounded-xl disabled:opacity-40 active:opacity-80 transition-opacity"
                 >
                   Save changes
