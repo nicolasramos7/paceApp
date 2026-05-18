@@ -1,5 +1,22 @@
 import { motion } from 'framer-motion'
-import { MapPin, Clock, Users } from 'lucide-react'
+import { MapPin, Clock, Users, Coffee, Footprints, Bike, Utensils, BookOpen, Palette, Music, Trees, Waves, Dumbbell, Camera, Gamepad2, PersonStanding } from 'lucide-react'
+
+const iconMap = {
+  coffee: Coffee,
+  walk: Footprints,
+  run: PersonStanding,
+  bike: Bike,
+  food: Utensils,
+  book: BookOpen,
+  art: Palette,
+  music: Music,
+  nature: Trees,
+  beach: Waves,
+  sport: Dumbbell,
+  social: Users,
+  photo: Camera,
+  game: Gamepad2,
+}
 
 const typeColors = {
   outdoor: { bg: '#E8F7F0', icon: '#7DC9A0', dot: '#7DC9A0' },
@@ -31,6 +48,7 @@ export default function PlanCard({ plan, onAccept, onDecline, onCancel, status }
   const colors = typeColors[plan.activityType] || typeColors.social
   const accepted = status === 'accepted'
   const declined = status === 'declined'
+  const PlanIcon = iconMap[plan.icon] || Users
 
   return (
     <motion.div
@@ -51,7 +69,7 @@ export default function PlanCard({ plan, onAccept, onDecline, onCancel, status }
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ backgroundColor: colors.bg }}
           >
-            <Users size={18} style={{ color: colors.icon }} strokeWidth={1.8} />
+            <PlanIcon size={18} style={{ color: colors.icon }} strokeWidth={1.8} />
           </div>
         </div>
 
