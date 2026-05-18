@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronRight, Edit3, MapPin, Briefcase, Calendar, X } from 'lucide-react'
+import { Edit3, MapPin, Briefcase, Calendar, X } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import BottomNav from '../components/layout/BottomNav'
 
@@ -62,7 +61,6 @@ function EditInput({ value, onChange, type = 'text', placeholder }) {
 }
 
 export default function Profile() {
-  const navigate = useNavigate()
   const user = useStore((s) => s.user)
   const updateUser = useStore((s) => s.updateUser)
   const logs = useStore((s) => s.logs)
@@ -216,20 +214,6 @@ export default function Profile() {
             </div>
           </div>
         )}
-
-        {/* Admin link */}
-        <div className="mx-4 mb-6">
-          <button
-            onClick={() => navigate('/admin')}
-            className="w-full flex items-center justify-between px-5 py-4 bg-pace-card rounded-2xl shadow-card"
-          >
-            <div>
-              <p className="text-pace-text text-sm font-medium">Municipality View</p>
-              <p className="text-pace-muted text-xs mt-0.5">Aggregate population data</p>
-            </div>
-            <ChevronRight size={16} className="text-pace-muted" />
-          </button>
-        </div>
       </div>
 
       <BottomNav />
