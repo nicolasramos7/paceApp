@@ -98,10 +98,8 @@ const TRACKER_CONFIG = [
 export default function Today() {
   const user = useStore((s) => s.user)
   const selectedDate = useStore((s) => s.selectedDate)
-  const getLog = useStore((s) => s.getLog)
+  const log = useStore((s) => s.logs[selectedDate] || {})
   const updateLog = useStore((s) => s.updateLog)
-
-  const log = getLog(selectedDate)
   const today = new Date().toISOString().split('T')[0]
   const yesterday = new Date(Date.now() - 864e5).toISOString().split('T')[0]
   const isToday = selectedDate === today
