@@ -191,7 +191,7 @@ export default function Admin() {
           </div>
         )}
 
-        {filteredUsers.length > 0 && (
+        {filteredUsers.length > 0 && (<>
 
         {/* Stat cards */}
         <div className="grid grid-cols-4 gap-4 mb-8">
@@ -372,7 +372,7 @@ export default function Admin() {
           </div>
         </div>
 
-        )}
+        </>)}
 
         <p className="text-center text-gray-300 text-xs pb-4">
           All data is anonymised and aggregated. No individual user information is accessible through this dashboard.
