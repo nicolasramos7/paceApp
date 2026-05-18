@@ -1,13 +1,10 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
-import { useStore } from '../store/useStore'
 import { demoUsers } from '../data/demoUsers'
 import { buildAggregateStats } from '../lib/adminStats'
-import { fetchDemoParticipants, toDemoParticipant } from '../lib/demoSync'
 import { ArrowLeft, Users, Clock, TrendingUp, Activity } from 'lucide-react'
 
 const COLORS = ['#7DC9A0', '#9B8ECD', '#7BAFD4', '#F5C06B', '#F2A0AE', '#F0976A']
@@ -52,34 +49,7 @@ function HeatmapCell({ value }) {
 
 export default function Admin() {
   const navigate = useNavigate()
-  const user = useStore((s) => s.user)
-  const logs = useStore((s) => s.logs)
-  const [sharedUsers, setSharedUsers] = useState([])
-
-  useEffect(() => {
-    let active = true
-
-    const loadSharedUsers = async () => {
-      const participants = await fetchDemoParticipants()
-      if (active) setSharedUsers(participants)
-    }
-
-    loadSharedUsers()
-    const interval = window.setInterval(loadSharedUsers, 3000)
-
-    return () => {
-      active = false
-      window.clearInterval(interval)
-    }
-  }, [])
-
-  const localUser = user ? toDemoParticipant(user, logs) : null
-  const sharedIds = new Set(sharedUsers.map((sharedUser) => sharedUser.id))
-  const liveUsers = localUser?.dailyLogs.length && !sharedIds.has(localUser.id)
-    ? [...sharedUsers, localUser]
-    : sharedUsers
-  const users = [...demoUsers, ...liveUsers]
-  const stats = buildAggregateStats(users)
+  const stats = buildAggregateStats(demoUsers)
 
   return (
     <div className="min-h-screen bg-[#F4F4F8] font-sans">
