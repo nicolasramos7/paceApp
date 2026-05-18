@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -6,6 +7,7 @@ import {
 import { useStore } from '../store/useStore'
 import { demoUsers } from '../data/demoUsers'
 import { buildAggregateStats } from '../lib/adminStats'
+import { fetchDemoParticipants, toDemoParticipant } from '../lib/demoSync'
 import { ArrowLeft, Users, Clock, TrendingUp, Activity } from 'lucide-react'
 
 const COLORS = ['#7DC9A0', '#9B8ECD', '#7BAFD4', '#F5C06B', '#F2A0AE', '#F0976A']
@@ -48,34 +50,35 @@ function HeatmapCell({ value }) {
   )
 }
 
-function getLocalUserWithLogs(user, logs) {
-  if (!user) return null
-
-  const dailyLogs = Object.entries(logs).map(([date, log]) => ({
-    date,
-    ...log,
-  }))
-
-  return {
-    id: user.id || 'local-user',
-    name: user.firstName || 'You',
-    age: Number(user.age) || 0,
-    zipCode: user.zipCode,
-    town: user.town,
-    gender: user.gender,
-    occupation: user.occupation,
-    interests: user.interests || [],
-    dailyLogs,
-  }
-}
-
 export default function Admin() {
   const navigate = useNavigate()
   const user = useStore((s) => s.user)
   const logs = useStore((s) => s.logs)
+  const [sharedUsers, setSharedUsers] = useState([])
 
-  const localUser = getLocalUserWithLogs(user, logs)
-  const users = localUser?.dailyLogs.length ? [...demoUsers, localUser] : demoUsers
+  useEffect(() => {
+    let active = true
+
+    const loadSharedUsers = async () => {
+      const participants = await fetchDemoParticipants()
+      if (active) setSharedUsers(participants)
+    }
+
+    loadSharedUsers()
+    const interval = window.setInterval(loadSharedUsers, 3000)
+
+    return () => {
+      active = false
+      window.clearInterval(interval)
+    }
+  }, [])
+
+  const localUser = user ? toDemoParticipant(user, logs) : null
+  const sharedIds = new Set(sharedUsers.map((sharedUser) => sharedUser.id))
+  const liveUsers = localUser?.dailyLogs.length && !sharedIds.has(localUser.id)
+    ? [...sharedUsers, localUser]
+    : sharedUsers
+  const users = [...demoUsers, ...liveUsers]
   const stats = buildAggregateStats(users)
 
   return (
