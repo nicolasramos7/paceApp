@@ -54,6 +54,18 @@ export const useStore = create(
         })
         saveDemoParticipant(get().user, nextLogs)
       },
+      removeWish: (wish) => {
+        set((s) => {
+          const nextLogs = {}
+          for (const [date, log] of Object.entries(s.logs)) {
+            nextLogs[date] = {
+              ...log,
+              wouldveLiked: (log.wouldveLiked || []).filter((w) => w !== wish),
+            }
+          }
+          return { logs: nextLogs }
+        })
+      },
 
       selectedDate: today(),
       setSelectedDate: (date) => set({ selectedDate: date }),

@@ -9,12 +9,20 @@ import NotInterestedModal from '../components/plans/NotInterestedModal'
 import { generatePlans } from '../lib/openai'
 import { demoUsers } from '../data/demoUsers'
 
+function matchWishes(plan, wishes) {
+  const text = `${plan.title} ${plan.description}`.toLowerCase()
+  return wishes.filter((w) =>
+    w.toLowerCase().split(/[\s,]+/).some((word) => word.length > 3 && text.includes(word))
+  )
+}
+
 export default function Plans() {
   const navigate = useNavigate()
   const user = useStore((s) => s.user)
   const plans = useStore((s) => s.plans)
   const setPlans = useStore((s) => s.setPlans)
   const updatePlan = useStore((s) => s.updatePlan)
+  const removeWish = useStore((s) => s.removeWish)
   const initChat = useStore((s) => s.initChat)
   const logs = useStore((s) => s.logs)
 
@@ -30,7 +38,11 @@ export default function Plans() {
       setLoading(true)
       generatePlans(allWouldveLiked, user, demoUsers)
         .then((generated) => {
-          const withStatus = (Array.isArray(generated) ? generated : []).map((p) => ({ ...p, status: 'pending' }))
+          const withStatus = (Array.isArray(generated) ? generated : []).map((p) => ({
+            ...p,
+            status: 'pending',
+            relatedWishes: matchWishes(p, allWouldveLiked),
+          }))
           setPlans(withStatus)
         })
         .catch(() => {})
@@ -69,11 +81,30 @@ export default function Plans() {
     setDeclineTarget(planId)
   }
 
-  const handleDeclineSubmit = (reason) => {
+  const handleDeclineSubmit = (reason, wishToRemove) => {
     if (declineTarget) {
       updatePlan(declineTarget, { status: 'declined', declineReason: reason })
     }
     setDeclineTarget(null)
+
+    if (wishToRemove) {
+      removeWish(wishToRemove)
+      const updatedWishes = allWouldveLiked.filter((w) => w !== wishToRemove)
+      const acceptedPlans = plans.filter((p) => p.status === 'accepted')
+      setPlans(acceptedPlans)
+      if (updatedWishes.length > 0) {
+        setLoading(true)
+        generatePlans(updatedWishes, user, demoUsers).then((generated) => {
+          const withStatus = generated.map((p) => ({
+            ...p,
+            status: 'pending',
+            relatedWishes: matchWishes(p, updatedWishes),
+          }))
+          setPlans([...acceptedPlans, ...withStatus])
+          setLoading(false)
+        })
+      }
+    }
   }
 
   const openPlans = plans.filter((p) => p.status === 'pending')
@@ -147,7 +178,13 @@ export default function Plans() {
                 setLoading(true)
                 generatePlans(allWouldveLiked.length ? allWouldveLiked : ['coffee', 'walking'], user, demoUsers)
                   .then((generated) => {
-                    const withStatus = (Array.isArray(generated) ? generated : []).map((p) => ({ ...p, id: `plan_${Date.now()}_${Math.random()}`, status: 'pending' }))
+                    const wishes = allWouldveLiked.length ? allWouldveLiked : ['coffee', 'walking']
+                    const withStatus = (Array.isArray(generated) ? generated : []).map((p) => ({
+                      ...p,
+                      id: `plan_${Date.now()}_${Math.random()}`,
+                      status: 'pending',
+                      relatedWishes: matchWishes(p, wishes),
+                    }))
                     setPlans([...plans.filter((p) => p.status !== 'pending'), ...withStatus])
                   })
                   .catch(() => {})
@@ -165,6 +202,8 @@ export default function Plans() {
         open={!!declineTarget}
         onClose={() => setDeclineTarget(null)}
         onSubmit={handleDeclineSubmit}
+        plan={plans.find((p) => p.id === declineTarget) || null}
+        currentWishes={allWouldveLiked}
       />
 
       <BottomNav />
