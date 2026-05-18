@@ -188,6 +188,9 @@ export default function Onboarding() {
         </Field>
         <Field label="Age" required>
           <Input value={form.age} onChange={set('age')} placeholder="Your age" type="number" />
+          {form.age && Number(form.age) < 18 && (
+            <p className="text-pace-rose text-xs mt-1">You must be at least 18 years old to use Pace</p>
+          )}
         </Field>
       </div>
       <div className="flex gap-3 py-6">
@@ -196,7 +199,7 @@ export default function Onboarding() {
         </button>
         <button
           onClick={goNext}
-          disabled={!form.firstName || !form.gender || !form.age}
+          disabled={!form.firstName || !form.gender || !form.age || Number(form.age) < 18}
           className="flex-1 py-3.5 bg-pace-green text-white font-semibold rounded-xl disabled:opacity-40 transition-opacity"
         >
           Continue
