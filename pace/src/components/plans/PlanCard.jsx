@@ -68,7 +68,9 @@ export default function PlanCard({ plan, onAccept, onDecline, status }) {
 
         <div className="flex items-center justify-between mb-4">
           <AvatarCluster names={plan.participantNames} colors={avatarColors} />
-          <span className="text-pace-muted text-xs">{plan.groupSize} people joining</span>
+          <span className="text-pace-muted text-xs">
+            {plan.participantNames.length + (accepted ? 1 : 0)} people joining
+          </span>
         </div>
 
         {!accepted && !declined && (
