@@ -1,10 +1,7 @@
-import OpenAI from 'openai'
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY
+const model = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash-lite'
 
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY
-
-const client = apiKey && apiKey !== 'sk-your-key-here'
-  ? new OpenAI({ apiKey, dangerouslyAllowBrowser: true })
-  : null
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 const SYSTEM_PROMPT = `You are the AI behind Pace, a life rhythm tracker app. Your role is to analyze daily activity data and provide gentle, non-judgmental insights.
 
@@ -16,9 +13,44 @@ STRICT RULES:
 - Keep all text brief and human
 - Suggest group activities (3-5 people), never 1-on-1 meetups`
 
-export async function analyzeDayLog(log, userProfile) {
-  if (!client) return getFallbackInsight(log)
+async function generateJson(prompt, { temperature = 0.7, maxOutputTokens = 500 } = {}) {
+  if (!apiKey) throw new Error('Missing Gemini API key')
 
+  const response = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: SYSTEM_PROMPT }],
+      },
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature,
+        maxOutputTokens,
+        responseMimeType: 'application/json',
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Gemini request failed: ${response.status} ${errorText}`)
+  }
+
+  const data = await response.json()
+  const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('').trim()
+
+  if (!text) throw new Error('Gemini returned an empty response')
+
+  return JSON.parse(text)
+}
+
+export async function analyzeDayLog(log, userProfile) {
   const prompt = `Analyze this daily log and return a JSON object.
 
 User profile: ${JSON.stringify({ age: userProfile.age, occupation: userProfile.occupation, interests: userProfile.interests })}
@@ -49,26 +81,14 @@ Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
 }`
 
   try {
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 400,
-    })
-
-    const text = response.choices[0].message.content.trim()
-    return JSON.parse(text)
-  } catch {
+    return await generateJson(prompt, { temperature: 0.7, maxOutputTokens: 500 })
+  } catch (error) {
+    console.error('Gemini analyzeDayLog failed:', error)
     return getFallbackInsight(log)
   }
 }
 
 export async function generatePlans(wouldveLiked, userProfile, demoUsers) {
-  if (!client) return getFallbackPlans(wouldveLiked, userProfile)
-
   const matchedUsers = demoUsers
     .filter((u) =>
       u.interests.some((interest) => {
@@ -106,19 +126,9 @@ Return ONLY valid JSON array (no markdown) with this structure:
 ]`
 
   try {
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.8,
-      max_tokens: 600,
-    })
-
-    const text = response.choices[0].message.content.trim()
-    return JSON.parse(text)
-  } catch {
+    return await generateJson(prompt, { temperature: 0.8, maxOutputTokens: 700 })
+  } catch (error) {
+    console.error('Gemini generatePlans failed:', error)
     return getFallbackPlans(wouldveLiked, userProfile)
   }
 }

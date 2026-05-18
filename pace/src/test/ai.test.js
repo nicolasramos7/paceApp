@@ -2,25 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { demoAggregateStats, demoUsers } from '../data/demoUsers'
 import { buildAggregateStats } from '../lib/adminStats'
 
-const openAiMocks = vi.hoisted(() => ({
-  create: vi.fn(),
-}))
-
-vi.mock('openai', () => ({
-  default: vi.fn(function MockOpenAI() {
-    return {
-      chat: {
-        completions: {
-          create: openAiMocks.create,
-        },
-      },
-    }
-  }),
-}))
-
 const VALID_ACTIVITY_TYPES = ['active', 'creative', 'social', 'intellectual', 'outdoor']
 const BANNED_WORDS = ['lonely', 'isolated', 'depressed', 'alone', 'diagnostic', 'clinical']
 const BALANCE_DIMS = ['physical', 'social', 'rest', 'nutrition', 'productivity']
+const fetchMock = vi.fn()
 
 const sampleUser = {
   age: 28,
@@ -73,16 +58,49 @@ const activeSocialLog = {
 
 async function importAiModule(apiKey = 'test-key') {
   vi.resetModules()
-  vi.stubEnv('VITE_OPENAI_API_KEY', apiKey)
+  vi.stubEnv('VITE_GEMINI_API_KEY', apiKey)
   return import('../lib/openai')
 }
 
 function getLastRequest() {
-  return openAiMocks.create.mock.calls.at(-1)[0]
+  return {
+    url: fetchMock.mock.calls.at(-1)[0],
+    body: JSON.parse(fetchMock.mock.calls.at(-1)[1].body),
+  }
 }
 
 function getUserPrompt() {
-  return getLastRequest().messages.find((message) => message.role === 'user').content
+  return getLastRequest().body.contents[0].parts[0].text
+}
+
+function mockGeminiJson(payload) {
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      candidates: [
+        {
+          content: {
+            parts: [{ text: JSON.stringify(payload) }],
+          },
+        },
+      ],
+    }),
+  })
+}
+
+function mockGeminiText(text) {
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      candidates: [
+        {
+          content: {
+            parts: [{ text }],
+          },
+        },
+      ],
+    }),
+  })
 }
 
 function assertNoBannedLanguage(text) {
@@ -119,50 +137,49 @@ function assertPlanContract(plan, allowedNames) {
 }
 
 beforeEach(() => {
-  openAiMocks.create.mockReset()
+  fetchMock.mockReset()
+  vi.stubGlobal('fetch', fetchMock)
+  vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
 afterEach(() => {
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 describe('generatePlans', () => {
   it('builds a prompt from the user wish list and the matching demo users', async () => {
-    openAiMocks.create.mockResolvedValueOnce({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify([
-              {
-                id: 'plan_football_1',
-                title: 'Casual Football at the Park',
-                description: 'A relaxed small-sided match at a nearby pitch with people who enjoy easy outdoor games.',
-                activityType: 'active',
-                suggestedTime: 'This Saturday morning',
-                location: 'Local football pitch',
-                participantNames: ['Sofia', 'Marcus', 'Elena'],
-                groupSize: 4,
-              },
-              {
-                id: 'plan_football_2',
-                title: 'Neighbourhood Kickabout',
-                description: 'A low-pressure group football session with room to play, chat, and take breaks.',
-                activityType: 'outdoor',
-                suggestedTime: 'Sunday afternoon',
-                location: 'Community sports field',
-                participantNames: ['Lucas', 'Mia', 'Tom'],
-                groupSize: 4,
-              },
-            ]),
-          },
-        },
-      ],
-    })
+    mockGeminiJson([
+      {
+        id: 'plan_football_1',
+        title: 'Casual Football at the Park',
+        description: 'A relaxed small-sided match at a nearby pitch with people who enjoy easy outdoor games.',
+        activityType: 'active',
+        suggestedTime: 'This Saturday morning',
+        location: 'Local football pitch',
+        participantNames: ['Sofia', 'Marcus', 'Elena'],
+        groupSize: 4,
+      },
+      {
+        id: 'plan_football_2',
+        title: 'Neighbourhood Kickabout',
+        description: 'A low-pressure group football session with room to play, chat, and take breaks.',
+        activityType: 'outdoor',
+        suggestedTime: 'Sunday afternoon',
+        location: 'Community sports field',
+        participantNames: ['Lucas', 'Mia', 'Tom'],
+        groupSize: 4,
+      },
+    ])
 
     const { generatePlans } = await importAiModule()
     const plans = await generatePlans(footballWishes, footballUser, footballUsers)
+    const request = getLastRequest()
     const prompt = getUserPrompt()
 
+    expect(request.url).toContain('gemini-2.5-flash-lite:generateContent')
+    expect(request.body.generationConfig.responseMimeType).toBe('application/json')
     expect(prompt).toContain('played football')
     expect(prompt).toContain('joined a casual football match')
     expect(prompt).toContain('Football')
@@ -181,9 +198,7 @@ describe('generatePlans', () => {
   })
 
   it('limits matched participants in the prompt to the first six relevant demo users', async () => {
-    openAiMocks.create.mockResolvedValueOnce({
-      choices: [{ message: { content: '[]' } }],
-    })
+    mockGeminiJson([])
 
     const { generatePlans } = await importAiModule()
     await generatePlans(footballWishes, footballUser, footballUsers)
@@ -199,9 +214,7 @@ describe('generatePlans', () => {
   })
 
   it('falls back to safe default plans when the model response is not valid JSON', async () => {
-    openAiMocks.create.mockResolvedValueOnce({
-      choices: [{ message: { content: 'not json' } }],
-    })
+    mockGeminiText('not json')
 
     const { generatePlans } = await importAiModule()
     const plans = await generatePlans(footballWishes, footballUser, footballUsers)
@@ -215,26 +228,18 @@ describe('generatePlans', () => {
 
 describe('analyzeDayLog', () => {
   it('sends the full day log context to the model and parses the returned scores', async () => {
-    openAiMocks.create.mockResolvedValueOnce({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              insight: 'Your day had a steady rhythm with movement, shared moments, and good recovery.',
-              suggestion: 'Tomorrow, a casual group activity could keep that rhythm feeling easy.',
-              activityBalance: {
-                physical: 88,
-                social: 82,
-                rest: 85,
-                nutrition: 90,
-                productivity: 78,
-              },
-              socialFulfillment: 84,
-              tags: ['active day', 'shared rhythm', 'well rested'],
-            }),
-          },
-        },
-      ],
+    mockGeminiJson({
+      insight: 'Your day had a steady rhythm with movement, shared moments, and good recovery.',
+      suggestion: 'Tomorrow, a casual group activity could keep that rhythm feeling easy.',
+      activityBalance: {
+        physical: 88,
+        social: 82,
+        rest: 85,
+        nutrition: 90,
+        productivity: 78,
+      },
+      socialFulfillment: 84,
+      tags: ['active day', 'shared rhythm', 'well rested'],
     })
 
     const { analyzeDayLog } = await importAiModule()
@@ -262,7 +267,7 @@ describe('analyzeDayLog', () => {
     const active = await analyzeDayLog(activeSocialLog, sampleUser)
     const low = await analyzeDayLog(lowSocialLog, sampleUser)
 
-    expect(openAiMocks.create).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
     expect(active.socialFulfillment).toBeGreaterThan(low.socialFulfillment)
     expect(active.activityBalance.physical).toBeGreaterThan(low.activityBalance.physical)
     expect(active.activityBalance.rest).toBeGreaterThan(low.activityBalance.rest)
@@ -273,9 +278,7 @@ describe('analyzeDayLog', () => {
   })
 
   it('falls back to safe analysis when the model response is not valid JSON', async () => {
-    openAiMocks.create.mockResolvedValueOnce({
-      choices: [{ message: { content: 'not json' } }],
-    })
+    mockGeminiText('not json')
 
     const { analyzeDayLog } = await importAiModule()
     const result = await analyzeDayLog(lowSocialLog, sampleUser)
