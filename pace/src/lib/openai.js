@@ -96,27 +96,34 @@ Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
 }
 
 export async function generatePlans(wouldveLiked, userProfile, demoUsers) {
-  const matchedUsers = demoUsers
-    .filter((u) =>
-      u.interests.some((interest) => {
-        const interestWords = interest.toLowerCase().split(/[\s,]+/)
-        return wouldveLiked.some((w) => {
-          const likedWords = w.toLowerCase().split(/[\s,]+/).filter((lw) => lw.length > 3)
-          return interestWords.some((iw) =>
-            likedWords.some((lw) => lw.includes(iw) || iw.includes(lw))
-          )
-        })
-      })
-    )
-    .slice(0, 6)
+  const enrichedUsers = demoUsers.map((u) => ({
+    name: u.name,
+    age: u.age,
+    town: u.town,
+    zipCode: u.zipCode,
+    interests: u.interests,
+    wouldveLiked: [...new Set((u.dailyLogs || []).flatMap((l) => l.wouldveLiked || []))],
+  }))
 
-  const prompt = `A user wants to do these activities: ${wouldveLiked.join(', ')}.
+  const prompt = `You are matching a user with real people for casual group activities.
 
-User profile: age ${userProfile.age}, location ${userProfile.town} (ZIP: ${userProfile.zipCode}), interests: ${(userProfile.interests || []).join(', ')}.
+Current user:
+- Age: ${userProfile.age}
+- Location: ${[userProfile.town, userProfile.zipCode, userProfile.country].filter(Boolean).join(', ')}
+- Interests: ${(userProfile.interests || []).join(', ')}
+- Would've liked to do recently: ${wouldveLiked.join(', ')}
 
-Nearby users who share interests: ${matchedUsers.map((u) => `${u.name} (${u.age}yo, likes: ${u.interests.join(', ')})`).join('; ')}
+Available people:
+${enrichedUsers.map((u) => `- ${u.name} (${u.age}yo, ${u.town} ZIP ${u.zipCode}): interests: ${u.interests.join(', ')}; would've liked: ${u.wouldveLiked.join(', ')}`).join('\n')}
 
-Create 2-3 gentle group activity plan proposals. Each should be casual, low-pressure, and for 3-5 people.
+TASK: Create 2-3 casual group activity proposals (3-5 people each).
+
+MATCHING RULES:
+1. Select participants whose "would've liked" or interests overlap with the current user's "would've liked" items
+2. Prefer participants in nearby locations — be generous, people can travel within reasonable distance
+3. If no one shares the exact activity, propose a similar one (e.g. nobody runs → suggest a walk with someone who likes walking)
+4. Only use names from the list above in participantNames — never invent new names
+5. Keep plans low-pressure and inviting
 
 Return ONLY valid JSON array (no markdown) with this structure:
 [
@@ -133,7 +140,7 @@ Return ONLY valid JSON array (no markdown) with this structure:
 ]`
 
   try {
-    return await generateJson(prompt, { temperature: 0.8, maxOutputTokens: 700 })
+    return await generateJson(prompt, { temperature: 0.8, maxOutputTokens: 800 })
   } catch (error) {
     console.error('Gemini generatePlans failed:', error)
     return getFallbackPlans(wouldveLiked, userProfile)
