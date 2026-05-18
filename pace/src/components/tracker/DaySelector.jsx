@@ -3,7 +3,7 @@ import { useStore } from '../../store/useStore'
 function getWeekDays() {
   const today = new Date()
   const days = []
-  for (let i = -3; i <= 3; i++) {
+  for (let i = -6; i <= 0; i++) {
     const d = new Date(today)
     d.setDate(today.getDate() + i)
     days.push({
@@ -23,19 +23,15 @@ export default function DaySelector() {
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <div className="bg-pace-card rounded-2xl shadow-card mx-4 px-2 py-4">
+    <div className="bg-pace-card border-b border-pace-border px-4 py-3">
       <div className="flex items-center justify-between">
         {days.map(({ date, dayName, dayNum, isToday }) => {
           const isSelected = date === selectedDate
-          const isFuture = date > today
           return (
             <button
               key={date}
-              onClick={() => !isFuture && setSelectedDate(date)}
-              disabled={isFuture}
-              className={`flex flex-col items-center gap-1 w-10 py-1 rounded-2xl transition-all duration-150 ${
-                isFuture ? 'opacity-30 cursor-default' : 'cursor-pointer'
-              }`}
+              onClick={() => setSelectedDate(date)}
+              className="flex flex-col items-center gap-1 flex-1 py-1 rounded-2xl transition-all duration-150 cursor-pointer"
             >
               <span className="text-[11px] font-medium text-pace-muted uppercase tracking-wide">
                 {dayName}

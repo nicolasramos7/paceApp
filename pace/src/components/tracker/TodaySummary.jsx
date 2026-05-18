@@ -58,7 +58,7 @@ export default function TodaySummary({ log, insight }) {
     }))
 
   return (
-    <div className="bg-pace-card rounded-2xl shadow-card mx-4 px-5 py-5">
+    <div className="px-6 py-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-pace-text font-semibold text-base">
           {isToday ? 'Today' : selectedDate}

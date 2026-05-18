@@ -161,7 +161,7 @@ export default function Today() {
         </div>
 
         {/* Day selector */}
-        <div className="mb-4">
+        <div className="sticky top-0 z-10 mb-2">
           <DaySelector />
         </div>
 
