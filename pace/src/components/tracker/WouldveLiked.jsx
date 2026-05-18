@@ -50,20 +50,20 @@ export default function WouldveLiked({ items, onChange, readOnly }) {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2">
         <AnimatePresence>
           {items.map((item) => (
             <motion.div
               key={item}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center gap-2 bg-pace-card border border-pace-border rounded-full px-3 py-1.5 shadow-card"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              className="bg-pace-card rounded-xl px-4 py-3 flex items-center justify-between shadow-card"
             >
-              <span className="text-pace-text text-xs font-medium">{item}</span>
+              <span className="text-pace-text text-sm">{item}</span>
               {!readOnly && (
                 <button onClick={() => removeItem(item)} className="text-pace-muted hover:text-pace-rose transition-colors">
-                  <X size={12} />
+                  <X size={14} />
                 </button>
               )}
             </motion.div>
@@ -81,7 +81,7 @@ export default function WouldveLiked({ items, onChange, readOnly }) {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
-            className="mt-4 bg-pace-card rounded-2xl shadow-card p-4"
+            className="mt-3 bg-pace-card rounded-2xl shadow-card p-4"
           >
             <div className="flex gap-2">
               <input

@@ -103,8 +103,9 @@ export default function Today() {
 
   const log = getLog(selectedDate)
   const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 864e5).toISOString().split('T')[0]
   const isToday = selectedDate === today
-  const isReadOnly = !isToday
+  const isReadOnly = selectedDate !== today && selectedDate !== yesterday
 
   const [openModal, setOpenModal] = useState(null)
   const [momentInput, setMomentInput] = useState('')
