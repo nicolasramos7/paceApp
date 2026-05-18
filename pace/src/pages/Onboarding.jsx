@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import { ChevronLeft, Check } from 'lucide-react'
 import { useStore } from '../store/useStore'
 
 const INTERESTS = {
@@ -12,7 +12,7 @@ const INTERESTS = {
   Social: ['Coffee chats', 'Eating out', 'Volunteering', 'Exploring town', 'Local events'],
 }
 
-const TOTAL_STEPS = 6
+const TOTAL_STEPS = 5
 
 function ProgressBar({ step }) {
   return (
@@ -83,7 +83,7 @@ function Chip({ label, selected, onToggle }) {
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const setUser = useStore((s) => s.setUser)
+  const register = useStore((s) => s.register)
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
 
@@ -109,35 +109,19 @@ export default function Onboarding() {
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   const goNext = () => { setDir(1); setStep((s) => s + 1) }
-  const goBack = () => { setDir(-1); setStep((s) => s - 1) }
+  const goBack = () => {
+    if (step === 0) { navigate('/welcome'); return }
+    setDir(-1)
+    setStep((s) => s - 1)
+  }
 
   const finish = () => {
-    setUser({ ...form, id: `user_${Date.now()}` })
+    register(form)
     navigate('/today')
   }
 
   const steps = [
-    // Step 0: Welcome
-    <div key="welcome" className="flex flex-col items-center justify-center h-full text-center px-8">
-      <div className="w-16 h-16 bg-pace-green rounded-3xl flex items-center justify-center mb-6 shadow-card">
-        <span className="text-white text-2xl font-bold">p</span>
-      </div>
-      <h1 className="text-3xl font-bold text-pace-text mb-3">pace</h1>
-      <p className="text-pace-secondary text-base leading-relaxed mb-2">
-        A lightweight life rhythm tracker that helps you build healthier routines and meaningful shared experiences.
-      </p>
-      <p className="text-pace-muted text-sm leading-relaxed">
-        Simple, private, and always at your own pace.
-      </p>
-      <button
-        onClick={goNext}
-        className="mt-10 w-full py-4 bg-pace-green text-white font-semibold rounded-2xl flex items-center justify-center gap-2 active:opacity-90 transition-opacity"
-      >
-        Get started <ChevronRight size={18} />
-      </button>
-    </div>,
-
-    // Step 1: Account
+    // Step 0: Account
     (() => {
       const emailInvalid = form.email.length > 0 && !EMAIL_RE.test(form.email)
       const showEmailError = (emailTouched || accountAttempted) && emailInvalid

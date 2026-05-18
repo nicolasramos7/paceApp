@@ -8,11 +8,38 @@ export const useStore = create(
   persist(
     (set, get) => ({
       user: null,
+      registeredUser: null,
+
+      register: (userData) => {
+        const newUser = { ...userData, id: `user_${Date.now()}` }
+        set({ user: newUser, registeredUser: newUser })
+        saveDemoParticipant(newUser, get().logs)
+      },
+      login: (email, password) => {
+        const { registeredUser } = get()
+        if (registeredUser && registeredUser.email === email && registeredUser.password === password) {
+          set({ user: registeredUser })
+          return true
+        }
+        return false
+      },
+      signOut: () => set({ user: null }),
+      resetPassword: (email, newPassword) => {
+        const { registeredUser } = get()
+        if (!registeredUser || registeredUser.email !== email) return false
+        set({ registeredUser: { ...registeredUser, password: newPassword } })
+        return true
+      },
+
       setUser: (user) => {
-        set({ user })
+        set({ user, registeredUser: user })
         saveDemoParticipant(user, get().logs)
       },
-      updateUser: (fields) => set((s) => ({ user: { ...s.user, ...fields } })),
+      updateUser: (fields) =>
+        set((s) => ({
+          user: { ...s.user, ...fields },
+          registeredUser: s.registeredUser ? { ...s.registeredUser, ...fields } : s.registeredUser,
+        })),
 
       logs: {},
       getLog: (date) => get().logs[date] || {},
@@ -57,6 +84,11 @@ export const useStore = create(
     }),
     {
       name: 'pace-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state?.user && !state?.registeredUser) {
+          state.registeredUser = state.user
+        }
+      },
     }
   )
 )

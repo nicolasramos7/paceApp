@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useStore } from './store/useStore'
 import PhoneFrame from './components/layout/PhoneFrame'
+import Welcome from './pages/Welcome'
+import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
 import Today from './pages/Today'
 import Plans from './pages/Plans'
@@ -14,8 +16,10 @@ function AppRoutes() {
   if (!user) {
     return (
       <Routes>
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="*" element={<Navigate to="/onboarding" replace />} />
+        <Route path="/welcome" element={<Welcome />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Onboarding />} />
+        <Route path="*" element={<Navigate to="/welcome" replace />} />
       </Routes>
     )
   }

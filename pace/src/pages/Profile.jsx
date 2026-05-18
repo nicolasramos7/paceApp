@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Edit3, MapPin, Briefcase, Calendar, X } from 'lucide-react'
 import { useStore } from '../store/useStore'
@@ -61,9 +62,16 @@ function EditInput({ value, onChange, type = 'text', placeholder }) {
 }
 
 export default function Profile() {
+  const navigate = useNavigate()
   const user = useStore((s) => s.user)
   const updateUser = useStore((s) => s.updateUser)
+  const signOut = useStore((s) => s.signOut)
   const logs = useStore((s) => s.logs)
+
+  const handleSignOut = () => {
+    signOut()
+    navigate('/welcome')
+  }
 
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({})
@@ -214,6 +222,16 @@ export default function Profile() {
             </div>
           </div>
         )}
+
+        {/* Sign out */}
+        <div className="mx-4 mb-6">
+          <button
+            onClick={handleSignOut}
+            className="w-full py-4 text-pace-rose text-sm font-semibold rounded-2xl border border-pace-rose/30 bg-pace-rose/5 active:opacity-80 transition-opacity"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       <BottomNav />
