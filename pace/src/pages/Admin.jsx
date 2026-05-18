@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -5,7 +6,7 @@ import {
 } from 'recharts'
 import { demoUsers } from '../data/demoUsers'
 import { buildAggregateStats } from '../lib/adminStats'
-import { ArrowLeft, Users, Clock, TrendingUp, Activity } from 'lucide-react'
+import { ArrowLeft, Users, Clock, TrendingUp, Activity, MapPin } from 'lucide-react'
 
 const COLORS = ['#7DC9A0', '#9B8ECD', '#7BAFD4', '#F5C06B', '#F2A0AE', '#F0976A']
 
@@ -47,9 +48,80 @@ function HeatmapCell({ value }) {
   )
 }
 
+function AdminGate({ onEnter }) {
+  const [country, setCountry] = useState('')
+  const [zipCode, setZipCode] = useState('')
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (country.trim() && zipCode.trim()) onEnter(country.trim(), zipCode.trim())
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F4F4F8] font-sans flex items-center justify-center">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 w-full max-w-md">
+        <div className="flex items-center gap-2 mb-8">
+          <div className="w-8 h-8 bg-[#7DC9A0] rounded-xl flex items-center justify-center">
+            <span className="text-white text-sm font-bold">p</span>
+          </div>
+          <span className="text-gray-900 font-semibold">pace</span>
+          <span className="text-gray-400 text-sm">— Municipality Dashboard</span>
+        </div>
+        <div className="flex items-center justify-center w-12 h-12 bg-[#E8F7F0] rounded-2xl mb-6">
+          <MapPin size={22} className="text-[#7DC9A0]" strokeWidth={1.8} />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Enter your area</h1>
+        <p className="text-gray-400 text-sm mb-8">
+          View anonymised wellness data for residents in your municipality.
+        </p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Country</label>
+            <input
+              type="text"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              placeholder="e.g. Spain"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 text-sm placeholder-gray-300 focus:outline-none focus:border-[#7DC9A0] transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">ZIP / Postal code</label>
+            <input
+              type="text"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value)}
+              placeholder="e.g. 08001"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 text-sm placeholder-gray-300 focus:outline-none focus:border-[#7DC9A0] transition-colors"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!country.trim() || !zipCode.trim()}
+            className="mt-2 w-full py-3 bg-[#7DC9A0] text-white text-sm font-semibold rounded-xl disabled:opacity-40 hover:opacity-90 transition-opacity"
+          >
+            View dashboard
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const navigate = useNavigate()
-  const stats = buildAggregateStats(demoUsers)
+  const [area, setArea] = useState(null)
+
+  if (!area) {
+    return <AdminGate onEnter={(country, zipCode) => setArea({ country, zipCode })} />
+  }
+
+  const filteredUsers = demoUsers.filter(
+    (u) =>
+      u.zipCode === area.zipCode &&
+      (u.country || '').toLowerCase() === area.country.toLowerCase()
+  )
+  const stats = buildAggregateStats(filteredUsers)
 
   return (
     <div className="min-h-screen bg-[#F4F4F8] font-sans">
@@ -74,9 +146,21 @@ export default function Admin() {
             <span className="text-gray-400 text-sm">— Municipality Dashboard</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-[#7DC9A0]" />
-          <span className="text-gray-400 text-xs">Live data</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 text-gray-400 text-xs">
+            <MapPin size={13} />
+            <span>{area.country} · {area.zipCode}</span>
+          </div>
+          <button
+            onClick={() => setArea(null)}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors underline underline-offset-2"
+          >
+            Change area
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#7DC9A0]" />
+            <span className="text-gray-400 text-xs">Live data</span>
+          </div>
         </div>
       </header>
 
@@ -85,9 +169,29 @@ export default function Admin() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Population Wellness Overview</h1>
           <p className="text-gray-400 text-sm">
-            Anonymous aggregate patterns from account details and daily activity logs only.
+            {filteredUsers.length > 0
+              ? `${filteredUsers.length} registered user${filteredUsers.length !== 1 ? 's' : ''} in ${area.country}, ${area.zipCode} — anonymous aggregate patterns only.`
+              : `No registered users found in ${area.country}, ${area.zipCode}.`}
           </p>
         </div>
+
+        {filteredUsers.length === 0 && (
+          <div className="bg-white rounded-2xl p-10 shadow-sm border border-gray-100 text-center mb-8">
+            <div className="w-12 h-12 bg-[#E8F7F0] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <MapPin size={22} className="text-[#7DC9A0]" strokeWidth={1.8} />
+            </div>
+            <p className="text-gray-900 font-semibold mb-1">No data for this area</p>
+            <p className="text-gray-400 text-sm">Try a different country or ZIP code.</p>
+            <button
+              onClick={() => setArea(null)}
+              className="mt-4 px-5 py-2.5 bg-[#7DC9A0] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-opacity"
+            >
+              Change area
+            </button>
+          </div>
+        )}
+
+        {filteredUsers.length > 0 && (
 
         {/* Stat cards */}
         <div className="grid grid-cols-4 gap-4 mb-8">
@@ -267,6 +371,8 @@ export default function Admin() {
             </table>
           </div>
         </div>
+
+        )}
 
         <p className="text-center text-gray-300 text-xs pb-4">
           All data is anonymised and aggregated. No individual user information is accessible through this dashboard.
