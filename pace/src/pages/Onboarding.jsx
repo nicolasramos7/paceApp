@@ -103,6 +103,8 @@ export default function Onboarding() {
     }))
   }
 
+  const [accountAttempted, setAccountAttempted] = useState(false)
+
   const goNext = () => { setDir(1); setStep((s) => s + 1) }
   const goBack = () => { setDir(-1); setStep((s) => s - 1) }
 
@@ -135,8 +137,12 @@ export default function Onboarding() {
     // Step 1: Account
     (() => {
       const pwTooShort = form.password.length > 0 && form.password.length < 8
-      const pwMismatch = form.confirmPassword.length > 0 && form.password !== form.confirmPassword
-      const accountValid = form.email && form.password.length >= 8 && form.password === form.confirmPassword
+      const pwMismatch = form.password !== form.confirmPassword
+      const accountValid = form.email && form.password.length >= 8 && !pwMismatch
+      const handleContinue = () => {
+        setAccountAttempted(true)
+        if (accountValid) goNext()
+      }
       return (
         <div key="account" className="flex flex-col h-full px-6 pt-2">
           <ProgressBar step={1} />
@@ -152,7 +158,7 @@ export default function Onboarding() {
             </Field>
             <Field label="Confirm Password" required>
               <Input value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="Repeat your password" type="password" />
-              {pwMismatch && <p className="text-pace-rose text-xs mt-1">Passwords do not match</p>}
+              {accountAttempted && pwMismatch && <p className="text-pace-rose text-xs mt-1">Passwords do not match</p>}
             </Field>
           </div>
           <div className="flex gap-3 pb-6">
@@ -160,8 +166,8 @@ export default function Onboarding() {
               <ChevronLeft size={20} className="text-pace-secondary" />
             </button>
             <button
-              onClick={goNext}
-              disabled={!accountValid}
+              onClick={handleContinue}
+              disabled={!form.email || form.password.length < 8 || !form.confirmPassword}
               className="flex-1 py-3.5 bg-pace-green text-white font-semibold rounded-xl disabled:opacity-40 transition-opacity"
             >
               Continue
