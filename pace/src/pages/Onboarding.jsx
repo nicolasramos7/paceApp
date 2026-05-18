@@ -104,6 +104,9 @@ export default function Onboarding() {
   }
 
   const [accountAttempted, setAccountAttempted] = useState(false)
+  const [emailTouched, setEmailTouched] = useState(false)
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   const goNext = () => { setDir(1); setStep((s) => s + 1) }
   const goBack = () => { setDir(-1); setStep((s) => s - 1) }
@@ -136,9 +139,11 @@ export default function Onboarding() {
 
     // Step 1: Account
     (() => {
+      const emailInvalid = form.email.length > 0 && !EMAIL_RE.test(form.email)
+      const showEmailError = (emailTouched || accountAttempted) && emailInvalid
       const pwTooShort = form.password.length > 0 && form.password.length < 8
       const pwMismatch = form.password !== form.confirmPassword
-      const accountValid = form.email && form.password.length >= 8 && !pwMismatch
+      const accountValid = form.email && EMAIL_RE.test(form.email) && form.password.length >= 8 && !pwMismatch
       const handleContinue = () => {
         setAccountAttempted(true)
         if (accountValid) goNext()
@@ -150,7 +155,15 @@ export default function Onboarding() {
           <p className="text-pace-muted text-sm mb-6">Your data stays private and is never shared individually.</p>
           <div className="flex flex-col gap-4 flex-1">
             <Field label="Email" required>
-              <Input value={form.email} onChange={set('email')} placeholder="you@email.com" type="email" />
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => set('email')(e.target.value)}
+                onBlur={() => setEmailTouched(true)}
+                placeholder="you@email.com"
+                className="w-full px-4 py-3 rounded-xl bg-pace-bg border border-pace-border text-pace-text text-sm placeholder-pace-muted outline-none focus:border-pace-green transition-colors"
+              />
+              {showEmailError && <p className="text-pace-rose text-xs mt-1">Please enter a valid email address</p>}
             </Field>
             <Field label="Password" required>
               <Input value={form.password} onChange={set('password')} placeholder="At least 8 characters" type="password" />
@@ -167,7 +180,7 @@ export default function Onboarding() {
             </button>
             <button
               onClick={handleContinue}
-              disabled={!form.email || form.password.length < 8 || !form.confirmPassword}
+              disabled={!form.email || !EMAIL_RE.test(form.email) || form.password.length < 8 || !form.confirmPassword}
               className="flex-1 py-3.5 bg-pace-green text-white font-semibold rounded-xl disabled:opacity-40 transition-opacity"
             >
               Continue
