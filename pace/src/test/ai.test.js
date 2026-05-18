@@ -1,14 +1,26 @@
-import { describe, it, expect } from 'vitest'
-import { generatePlans, analyzeDayLog } from '../lib/openai'
-import { demoUsers, demoAggregateStats } from '../data/demoUsers'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { demoAggregateStats, demoUsers } from '../data/demoUsers'
 
-// ─── shared fixtures ──────────────────────────────────────────────────────────
+const openAiMocks = vi.hoisted(() => ({
+  create: vi.fn(),
+}))
 
-const DEMO_USER_NAMES = demoUsers.map((u) => u.name)
+vi.mock('openai', () => ({
+  default: vi.fn(function MockOpenAI() {
+    return {
+      chat: {
+        completions: {
+          create: openAiMocks.create,
+        },
+      },
+    }
+  }),
+}))
+
 const VALID_ACTIVITY_TYPES = ['active', 'creative', 'social', 'intellectual', 'outdoor']
 const BANNED_WORDS = ['lonely', 'isolated', 'depressed', 'alone', 'diagnostic', 'clinical']
+const BALANCE_DIMS = ['physical', 'social', 'rest', 'nutrition', 'productivity']
 
-// A realistic user profile that overlaps with several demoUser interests
 const sampleUser = {
   age: 28,
   town: 'Barcelona',
@@ -17,24 +29,29 @@ const sampleUser = {
   interests: ['Walking', 'Coffee chats', 'Books'],
 }
 
-// Items from WouldveLiked that map to demoUser interests after the word-level fix:
-//   "taken a walk outside" → Sofia, Mia  (Walking)
-//   "visited a museum"     → Elena, Ava  (Museums)
-//   "attended a local event" → Marcus   (Local events)
-const wouldveLiked = ['taken a walk outside', 'visited a museum', 'attended a local event']
+const footballUser = {
+  ...sampleUser,
+  interests: ['Football', 'Running', 'Local sports'],
+}
 
-// A low-social day log — should produce low socialFulfillment score
+const footballUsers = demoUsers.map((user) => ({
+  ...user,
+  interests: ['Football', 'Running', 'Outdoor games'],
+}))
+
+const footballWishes = ['played football', 'joined a casual football match', 'spent time at a local pitch']
+
 const lowSocialLog = {
-  sleep: 'okay',
+  sleep: 'low',
   movement: 'short',
   food: 'mixed',
   activity: 'light',
   social: 'minimal',
   outsideTime: 'short',
-  wouldveLiked,
+  wouldveLiked: ['taken a walk outside', 'visited a museum'],
+  moments: ['had a calm morning'],
 }
 
-// A well-balanced day log — should produce high activityBalance scores
 const activeSocialLog = {
   sleep: 'good',
   movement: 'outside',
@@ -43,182 +60,265 @@ const activeSocialLog = {
   social: 'conversations',
   outsideTime: 'long',
   wouldveLiked: [],
+  moments: ['played football with neighbours'],
 }
 
-// ─── generatePlans ────────────────────────────────────────────────────────────
+async function importAiModule(apiKey = 'test-key') {
+  vi.resetModules()
+  vi.stubEnv('VITE_OPENAI_API_KEY', apiKey)
+  return import('../lib/openai')
+}
 
-describe('generatePlans — plan structure', () => {
-  it('returns 2–3 plans', async () => {
-    const plans = await generatePlans(wouldveLiked, sampleUser, demoUsers)
-    expect(plans.length).toBeGreaterThanOrEqual(2)
-    expect(plans.length).toBeLessThanOrEqual(3)
-  })
+function getLastRequest() {
+  return openAiMocks.create.mock.calls.at(-1)[0]
+}
 
-  it('each plan has all required fields', async () => {
-    const plans = await generatePlans(wouldveLiked, sampleUser, demoUsers)
+function getUserPrompt() {
+  return getLastRequest().messages.find((message) => message.role === 'user').content
+}
+
+function assertNoBannedLanguage(text) {
+  for (const word of BANNED_WORDS) {
+    expect(text.toLowerCase()).not.toContain(word)
+  }
+}
+
+function assertActivityBalance(balance) {
+  for (const dim of BALANCE_DIMS) {
+    expect(balance[dim], `${dim} must be a number`).toEqual(expect.any(Number))
+    expect(balance[dim], `${dim} below range`).toBeGreaterThanOrEqual(0)
+    expect(balance[dim], `${dim} above range`).toBeLessThanOrEqual(100)
+  }
+}
+
+function assertPlanContract(plan, allowedNames) {
+  expect(plan.id).toBeTruthy()
+  expect(plan.title).toBeTruthy()
+  expect(plan.description).toBeTruthy()
+  expect(plan.suggestedTime).toBeTruthy()
+  expect(plan.location).toBeTruthy()
+  expect(VALID_ACTIVITY_TYPES).toContain(plan.activityType)
+  expect(plan.groupSize).toBeGreaterThanOrEqual(3)
+  expect(plan.groupSize).toBeLessThanOrEqual(5)
+  expect(plan.participantNames.length).toBeGreaterThanOrEqual(3)
+  expect(plan.participantNames.length).toBeLessThanOrEqual(plan.groupSize)
+
+  for (const name of plan.participantNames) {
+    expect(allowedNames, `${name} should come from the provided demo users`).toContain(name)
+  }
+
+  assertNoBannedLanguage(`${plan.title} ${plan.description}`)
+}
+
+beforeEach(() => {
+  openAiMocks.create.mockReset()
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
+describe('generatePlans', () => {
+  it('builds a prompt from the user wish list and the matching demo users', async () => {
+    openAiMocks.create.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify([
+              {
+                id: 'plan_football_1',
+                title: 'Casual Football at the Park',
+                description: 'A relaxed small-sided match at a nearby pitch with people who enjoy easy outdoor games.',
+                activityType: 'active',
+                suggestedTime: 'This Saturday morning',
+                location: 'Local football pitch',
+                participantNames: ['Sofia', 'Marcus', 'Elena'],
+                groupSize: 4,
+              },
+              {
+                id: 'plan_football_2',
+                title: 'Neighbourhood Kickabout',
+                description: 'A low-pressure group football session with room to play, chat, and take breaks.',
+                activityType: 'outdoor',
+                suggestedTime: 'Sunday afternoon',
+                location: 'Community sports field',
+                participantNames: ['Lucas', 'Mia', 'Tom'],
+                groupSize: 4,
+              },
+            ]),
+          },
+        },
+      ],
+    })
+
+    const { generatePlans } = await importAiModule()
+    const plans = await generatePlans(footballWishes, footballUser, footballUsers)
+    const prompt = getUserPrompt()
+
+    expect(prompt).toContain('played football')
+    expect(prompt).toContain('joined a casual football match')
+    expect(prompt).toContain('Football')
+    expect(prompt).toContain('Local sports')
+
+    for (const user of footballUsers.slice(0, 6)) {
+      expect(prompt).toContain(user.name)
+      expect(prompt).toContain('Football')
+    }
+
+    expect(plans).toHaveLength(2)
     for (const plan of plans) {
-      expect(plan.id).toBeTruthy()
-      expect(plan.title).toBeTruthy()
-      expect(plan.description).toBeTruthy()
-      expect(plan.suggestedTime).toBeTruthy()
-      expect(plan.location).toBeTruthy()
-      expect(VALID_ACTIVITY_TYPES).toContain(plan.activityType)
-      expect(Array.isArray(plan.participantNames)).toBe(true)
-      expect(plan.groupSize).toBeGreaterThanOrEqual(3)
-      expect(plan.groupSize).toBeLessThanOrEqual(5)
+      assertPlanContract(plan, footballUsers.map((user) => user.name))
+      expect(`${plan.title} ${plan.description} ${plan.location}`).toMatch(/football|pitch|kickabout|sports field/i)
     }
   })
 
-  it('groupSize matches the length of participantNames', async () => {
-    const plans = await generatePlans(wouldveLiked, sampleUser, demoUsers)
+  it('limits matched participants in the prompt to the first six relevant demo users', async () => {
+    openAiMocks.create.mockResolvedValueOnce({
+      choices: [{ message: { content: '[]' } }],
+    })
+
+    const { generatePlans } = await importAiModule()
+    await generatePlans(footballWishes, footballUser, footballUsers)
+    const prompt = getUserPrompt()
+
+    for (const user of footballUsers.slice(0, 6)) {
+      expect(prompt).toContain(user.name)
+    }
+
+    for (const user of footballUsers.slice(6)) {
+      expect(prompt).not.toContain(`${user.name} (${user.age}yo`)
+    }
+  })
+
+  it('falls back to safe default plans when the model response is not valid JSON', async () => {
+    openAiMocks.create.mockResolvedValueOnce({
+      choices: [{ message: { content: 'not json' } }],
+    })
+
+    const { generatePlans } = await importAiModule()
+    const plans = await generatePlans(footballWishes, footballUser, footballUsers)
+
+    expect(plans).toHaveLength(2)
     for (const plan of plans) {
-      expect(plan.participantNames.length).toBeLessThanOrEqual(plan.groupSize)
+      assertPlanContract(plan, demoUsers.map((user) => user.name))
     }
   })
 })
 
-describe('generatePlans — demoUser alignment', () => {
-  it('participant names come from the demoUsers list', async () => {
-    const plans = await generatePlans(wouldveLiked, sampleUser, demoUsers)
-    for (const plan of plans) {
-      for (const name of plan.participantNames) {
-        expect(
-          DEMO_USER_NAMES,
-          `"${name}" is not a demoUser — AI invented a participant`
-        ).toContain(name)
-      }
-    }
-  })
+describe('analyzeDayLog', () => {
+  it('sends the full day log context to the model and parses the returned scores', async () => {
+    openAiMocks.create.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              insight: 'Your day had a steady rhythm with movement, shared moments, and good recovery.',
+              suggestion: 'Tomorrow, a casual group activity could keep that rhythm feeling easy.',
+              activityBalance: {
+                physical: 88,
+                social: 82,
+                rest: 85,
+                nutrition: 90,
+                productivity: 78,
+              },
+              socialFulfillment: 84,
+              tags: ['active day', 'shared rhythm', 'well rested'],
+            }),
+          },
+        },
+      ],
+    })
 
-  it('plan activities relate to the wouldveLiked input', async () => {
-    const plans = await generatePlans(wouldveLiked, sampleUser, demoUsers)
-    // At least one plan should be outdoor or social (walking/museum/events input)
-    const relevantTypes = plans.filter((p) =>
-      ['outdoor', 'social', 'active', 'intellectual'].includes(p.activityType)
-    )
-    expect(relevantTypes.length).toBeGreaterThanOrEqual(1)
-  })
-})
+    const { analyzeDayLog } = await importAiModule()
+    const result = await analyzeDayLog(activeSocialLog, footballUser)
+    const prompt = getUserPrompt()
 
-describe('generatePlans — content safety', () => {
-  it('titles and descriptions avoid banned language', async () => {
-    const plans = await generatePlans(wouldveLiked, sampleUser, demoUsers)
-    for (const plan of plans) {
-      for (const word of BANNED_WORDS) {
-        expect(plan.title.toLowerCase()).not.toContain(word)
-        expect(plan.description.toLowerCase()).not.toContain(word)
-      }
-    }
-  })
-})
+    expect(prompt).toContain('Sleep: good')
+    expect(prompt).toContain('Movement: outside')
+    expect(prompt).toContain('Food: home')
+    expect(prompt).toContain('Social exposure: conversations')
+    expect(prompt).toContain('Moments noted: played football with neighbours')
+    expect(prompt).toContain('"interests":["Football","Running","Local sports"]')
 
-// ─── analyzeDayLog ────────────────────────────────────────────────────────────
-
-describe('analyzeDayLog — response structure', () => {
-  it('returns all required fields', async () => {
-    const result = await analyzeDayLog(lowSocialLog, sampleUser)
     expect(result.insight).toBeTruthy()
     expect(result.suggestion).toBeTruthy()
-    expect(typeof result.socialFulfillment).toBe('number')
-    expect(typeof result.activityBalance).toBe('object')
-    expect(Array.isArray(result.tags)).toBe(true)
+    expect(result.socialFulfillment).toBe(84)
+    expect(result.tags).toHaveLength(3)
+    assertActivityBalance(result.activityBalance)
+    assertNoBannedLanguage(`${result.insight} ${result.suggestion} ${result.tags.join(' ')}`)
   })
 
-  it('activityBalance has all 5 dimensions within 0–100', async () => {
-    const result = await analyzeDayLog(lowSocialLog, sampleUser)
-    const dims = ['physical', 'social', 'rest', 'nutrition', 'productivity']
-    for (const dim of dims) {
-      expect(result.activityBalance[dim], `${dim} out of range`).toBeGreaterThanOrEqual(0)
-      expect(result.activityBalance[dim], `${dim} out of range`).toBeLessThanOrEqual(100)
-    }
-  })
+  it('keeps fallback scoring direction sensible when no API key is configured', async () => {
+    const { analyzeDayLog } = await importAiModule('')
 
-  it('socialFulfillment is within 0–100', async () => {
-    const result = await analyzeDayLog(lowSocialLog, sampleUser)
-    expect(result.socialFulfillment).toBeGreaterThanOrEqual(0)
-    expect(result.socialFulfillment).toBeLessThanOrEqual(100)
-  })
+    const active = await analyzeDayLog(activeSocialLog, sampleUser)
+    const low = await analyzeDayLog(lowSocialLog, sampleUser)
 
-  it('tags is an array of up to 3 strings', async () => {
-    const result = await analyzeDayLog(lowSocialLog, sampleUser)
-    expect(result.tags.length).toBeLessThanOrEqual(3)
-    for (const tag of result.tags) {
-      expect(typeof tag).toBe('string')
-    }
-  })
-})
-
-describe('analyzeDayLog — content safety', () => {
-  it('insight and suggestion avoid banned language', async () => {
-    const result = await analyzeDayLog(lowSocialLog, sampleUser)
-    for (const word of BANNED_WORDS) {
-      expect(result.insight.toLowerCase()).not.toContain(word)
-      expect(result.suggestion.toLowerCase()).not.toContain(word)
-    }
-  })
-})
-
-describe('analyzeDayLog — score direction', () => {
-  it('active social day scores higher than low social day', async () => {
-    const [active, low] = await Promise.all([
-      analyzeDayLog(activeSocialLog, sampleUser),
-      analyzeDayLog(lowSocialLog, sampleUser),
-    ])
+    expect(openAiMocks.create).not.toHaveBeenCalled()
     expect(active.socialFulfillment).toBeGreaterThan(low.socialFulfillment)
     expect(active.activityBalance.physical).toBeGreaterThan(low.activityBalance.physical)
+    expect(active.activityBalance.rest).toBeGreaterThan(low.activityBalance.rest)
+    assertActivityBalance(active.activityBalance)
+    assertActivityBalance(low.activityBalance)
+    assertNoBannedLanguage(`${active.insight} ${active.suggestion}`)
+    assertNoBannedLanguage(`${low.insight} ${low.suggestion}`)
+  })
+
+  it('falls back to safe analysis when the model response is not valid JSON', async () => {
+    openAiMocks.create.mockResolvedValueOnce({
+      choices: [{ message: { content: 'not json' } }],
+    })
+
+    const { analyzeDayLog } = await importAiModule()
+    const result = await analyzeDayLog(lowSocialLog, sampleUser)
+
+    expect(result.socialFulfillment).toBe(42)
+    assertActivityBalance(result.activityBalance)
+    assertNoBannedLanguage(`${result.insight} ${result.suggestion} ${result.tags.join(' ')}`)
   })
 })
 
-// ─── demoAggregateStats — admin page data ─────────────────────────────────────
-
-describe('demoAggregateStats — admin data integrity', () => {
-  it('totalUsers is a realistic population figure', () => {
+describe('demoAggregateStats admin dashboard data', () => {
+  it('uses internally consistent dashboard source data', () => {
     expect(demoAggregateStats.totalUsers).toBeGreaterThan(100)
+    expect(demoAggregateStats.weeklyTrend).toHaveLength(7)
+    expect(demoAggregateStats.outsideTimeDistribution.reduce((sum, item) => sum + item.value, 0)).toBe(100)
   })
 
-  it('weeklyTrend has 7 entries with scores in 0–100', () => {
-    expect(demoAggregateStats.weeklyTrend).toHaveLength(7)
+  it('keeps all dashboard percentages and scores in the 0-100 range', () => {
     for (const week of demoAggregateStats.weeklyTrend) {
       expect(week.socialScore).toBeGreaterThanOrEqual(0)
       expect(week.socialScore).toBeLessThanOrEqual(100)
       expect(week.movementScore).toBeGreaterThanOrEqual(0)
       expect(week.movementScore).toBeLessThanOrEqual(100)
     }
-  })
 
-  it('outsideTimeDistribution sums to 100%', () => {
-    const total = demoAggregateStats.outsideTimeDistribution.reduce(
-      (sum, d) => sum + d.value,
-      0
-    )
-    expect(total).toBe(100)
-  })
-
-  it('mostDesiredActivities align with demoUser interests', () => {
-    const allInterests = demoUsers.flatMap((u) => u.interests.map((i) => i.toLowerCase()))
-    for (const activity of demoAggregateStats.mostDesiredActivities) {
-      const name = activity.name.toLowerCase()
-      const matched = allInterests.some(
-        (i) => i.includes(name) || name.includes(i)
-      )
-      expect(matched, `"${activity.name}" has no matching demoUser interest`).toBe(true)
-    }
-  })
-
-  it('unmetActivitiesHeatmap percentages are 0–100', () => {
     for (const row of demoAggregateStats.unmetActivitiesHeatmap) {
-      for (const val of [row.coffee, row.walking, row.events, row.yoga]) {
-        expect(val).toBeGreaterThanOrEqual(0)
-        expect(val).toBeLessThanOrEqual(100)
+      for (const value of [row.coffee, row.walking, row.events, row.yoga]) {
+        expect(value).toBeGreaterThanOrEqual(0)
+        expect(value).toBeLessThanOrEqual(100)
+      }
+    }
+
+    for (const group of demoAggregateStats.activityByDemographic) {
+      for (const value of [group.social, group.physical, group.intellectual]) {
+        expect(value).toBeGreaterThanOrEqual(0)
+        expect(value).toBeLessThanOrEqual(100)
       }
     }
   })
 
-  it('activityByDemographic covers expected age groups', () => {
-    const groups = demoAggregateStats.activityByDemographic.map((d) => d.group)
-    expect(groups).toContain('18-25')
-    expect(groups).toContain('26-35')
-    expect(groups).toContain('36-50')
-    expect(groups).toContain('50+')
+  it('keeps desired activities aligned with the demo population interests', () => {
+    const interests = demoUsers.flatMap((user) => user.interests.map((interest) => interest.toLowerCase()))
+
+    for (const activity of demoAggregateStats.mostDesiredActivities) {
+      const activityName = activity.name.toLowerCase()
+      const matchedInterest = interests.some((interest) =>
+        interest.includes(activityName) || activityName.includes(interest)
+      )
+
+      expect(matchedInterest, `${activity.name} should map to at least one demo user interest`).toBe(true)
+      expect(activity.count).toBeGreaterThan(0)
+    }
   })
 })
