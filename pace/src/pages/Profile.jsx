@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Edit3, MapPin, Briefcase, Calendar, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import BottomNav from '../components/layout/BottomNav'
+import SearchableSelect from '../components/ui/SearchableSelect'
+import { COUNTRIES, LANGUAGES, INTERESTS } from '../data/options'
 
 const INTEREST_COLORS = {
   Walking: '#7DC9A0', Hiking: '#7DC9A0', Gym: '#F2A0AE', Running: '#F2A0AE',
@@ -49,16 +51,48 @@ function BalanceBar({ label, value, color }) {
   )
 }
 
-function EditInput({ value, onChange, type = 'text', placeholder }) {
+function EInput({ label, value, onChange, type = 'text', placeholder }) {
   return (
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full px-4 py-3 rounded-xl bg-pace-bg border border-pace-border text-pace-text text-sm placeholder-pace-muted outline-none focus:border-pace-green transition-colors"
-    />
+    <div>
+      <p className="text-pace-muted text-xs mb-1">{label}</p>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-4 py-3 rounded-xl bg-pace-bg border border-pace-border text-pace-text text-sm placeholder-pace-muted outline-none focus:border-pace-green transition-colors"
+      />
+    </div>
   )
+}
+
+function ESelect({ label, value, onChange, options, placeholder }) {
+  return (
+    <div>
+      <p className="text-pace-muted text-xs mb-1">{label}</p>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-4 py-3 rounded-xl bg-pace-bg border border-pace-border text-pace-text text-sm outline-none focus:border-pace-green transition-colors appearance-none"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  )
+}
+
+function ESearchable({ label, value, onChange, options, placeholder }) {
+  return (
+    <div>
+      <p className="text-pace-muted text-xs mb-1">{label}</p>
+      <SearchableSelect value={value} onChange={onChange} options={options} placeholder={placeholder} />
+    </div>
+  )
+}
+
+function SectionHeader({ title }) {
+  return <p className="text-pace-muted text-xs font-medium uppercase tracking-widest pt-2">{title}</p>
 }
 
 export default function Profile() {
@@ -68,32 +102,45 @@ export default function Profile() {
   const signOut = useStore((s) => s.signOut)
   const logs = useStore((s) => s.logs)
 
-  const handleSignOut = () => {
-    signOut()
-    navigate('/welcome')
-  }
+  const handleSignOut = () => { signOut(); navigate('/welcome') }
 
   const [editOpen, setEditOpen] = useState(false)
   const [editForm, setEditForm] = useState({})
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
   const [pwError, setPwError] = useState('')
   const [pwSaved, setPwSaved] = useState(false)
+  const [ageTouched, setAgeTouched] = useState(false)
 
   const openEdit = () => {
     setEditForm({
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      email: user.email || '',
-      town: user.town || '',
-      country: user.country || '',
+      firstName:  user.firstName  || '',
+      lastName:   user.lastName   || '',
+      email:      user.email      || '',
+      gender:     user.gender     || '',
+      age:        user.age        || '',
+      country:    user.country    || '',
+      zipCode:    user.zipCode    || '',
+      occupation: user.occupation || '',
+      language:   user.language   || '',
+      pets:       user.pets       || '',
+      interests:  user.interests  ? [...user.interests] : [],
     })
     setPw({ current: '', next: '', confirm: '' })
     setPwError('')
     setPwSaved(false)
+    setAgeTouched(false)
     setEditOpen(true)
   }
 
-  const setField = (field) => (val) => setEditForm((f) => ({ ...f, [field]: val }))
+  const sf = (field) => (val) => setEditForm((f) => ({ ...f, [field]: val }))
+
+  const toggleInterest = (item) =>
+    setEditForm((f) => ({
+      ...f,
+      interests: f.interests.includes(item)
+        ? f.interests.filter((i) => i !== item)
+        : [...f.interests, item],
+    }))
 
   const saveProfile = () => {
     updateUser(editForm)
@@ -102,23 +149,24 @@ export default function Profile() {
 
   const savePassword = () => {
     if (pw.current !== user.password) { setPwError('Current password is incorrect'); return }
-    if (pw.next.length < 8) { setPwError('New password must be at least 8 characters'); return }
-    if (pw.next !== pw.confirm) { setPwError('New passwords do not match'); return }
+    if (pw.next.length < 8)           { setPwError('New password must be at least 8 characters'); return }
+    if (pw.next !== pw.confirm)        { setPwError('New passwords do not match'); return }
     updateUser({ password: pw.next })
     setPw({ current: '', next: '', confirm: '' })
     setPwError('')
     setPwSaved(true)
   }
 
+  const ageInvalid = editForm.age && Number(editForm.age) < 18
+
   const latestLog = Object.values(logs).sort((a, b) => b.date - a.date)[0] || {}
   const balance = latestLog.activityBalance || {}
-
   const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || 'ME'
 
   const profileItems = [
-    { label: 'Location', value: user.town ? `${user.town}, ${user.country}` : null, Icon: MapPin },
-    { label: 'Status', value: user.occupation || null, Icon: Briefcase },
-    { label: 'Age', value: user.age ? `${user.age} years old` : null, Icon: Calendar },
+    { label: 'Location', value: user.country ? `${user.country}${user.zipCode ? ` · ${user.zipCode}` : ''}` : null, Icon: MapPin },
+    { label: 'Status',   value: user.occupation || null, Icon: Briefcase },
+    { label: 'Age',      value: user.age ? `${user.age} years old` : null, Icon: Calendar },
   ].filter((i) => i.value)
 
   const hasBalance = Object.keys(balance).length > 0
@@ -139,9 +187,7 @@ export default function Profile() {
           <div className="w-20 h-20 bg-pace-green rounded-3xl flex items-center justify-center shadow-card mb-3">
             <span className="text-white text-2xl font-bold">{initials}</span>
           </div>
-          <h2 className="text-pace-text font-bold text-xl">
-            {user.firstName} {user.lastName}
-          </h2>
+          <h2 className="text-pace-text font-bold text-xl">{user.firstName} {user.lastName}</h2>
           <p className="text-pace-muted text-sm mt-0.5">{user.email}</p>
         </div>
 
@@ -149,12 +195,7 @@ export default function Profile() {
         {profileItems.length > 0 && (
           <div className="mx-4 mb-4 bg-pace-card rounded-2xl shadow-card overflow-hidden">
             {profileItems.map(({ label, value, Icon }, i) => (
-              <div
-                key={label}
-                className={`flex items-center gap-3 px-5 py-4 ${
-                  i < profileItems.length - 1 ? 'border-b border-pace-border' : ''
-                }`}
-              >
+              <div key={label} className={`flex items-center gap-3 px-5 py-4 ${i < profileItems.length - 1 ? 'border-b border-pace-border' : ''}`}>
                 <div className="w-8 h-8 bg-pace-green-light rounded-xl flex items-center justify-center flex-shrink-0">
                   <Icon size={15} className="text-pace-green" />
                 </div>
@@ -172,10 +213,10 @@ export default function Profile() {
           <div className="mx-4 mb-4 bg-pace-card rounded-2xl shadow-card px-5 py-5">
             <h3 className="text-pace-text font-semibold text-sm mb-4">Your Rhythm</h3>
             <div className="flex flex-col gap-3">
-              <BalanceBar label="Physical" value={balance.physical} color="#7DC9A0" />
-              <BalanceBar label="Social" value={balance.social} color="#9B8ECD" />
-              <BalanceBar label="Rest" value={balance.rest} color="#7BAFD4" />
-              <BalanceBar label="Nutrition" value={balance.nutrition} color="#F5C06B" />
+              <BalanceBar label="Physical"    value={balance.physical}    color="#7DC9A0" />
+              <BalanceBar label="Social"      value={balance.social}      color="#9B8ECD" />
+              <BalanceBar label="Rest"        value={balance.rest}        color="#7BAFD4" />
+              <BalanceBar label="Nutrition"   value={balance.nutrition}   color="#F5C06B" />
               <BalanceBar label="Productivity" value={balance.productivity} color="#F2A0AE" />
             </div>
           </div>
@@ -187,14 +228,8 @@ export default function Profile() {
             <h3 className="text-pace-text font-semibold text-sm mb-4">Interests</h3>
             <div className="flex flex-wrap gap-2">
               {user.interests.map((interest) => (
-                <span
-                  key={interest}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium"
-                  style={{
-                    backgroundColor: INTEREST_BG[interest] || '#F4F4F8',
-                    color: INTEREST_COLORS[interest] || '#6B7280',
-                  }}
-                >
+                <span key={interest} className="px-3 py-1.5 rounded-full text-xs font-medium"
+                  style={{ backgroundColor: INTEREST_BG[interest] || '#F4F4F8', color: INTEREST_COLORS[interest] || '#6B7280' }}>
                   {interest}
                 </span>
               ))}
@@ -207,28 +242,15 @@ export default function Profile() {
           <div className="mx-4 mb-4 bg-pace-card rounded-2xl shadow-card px-5 py-5">
             <h3 className="text-pace-text font-semibold text-sm mb-3">More about you</h3>
             <div className="flex flex-col gap-2">
-              {user.language && (
-                <div className="flex justify-between">
-                  <span className="text-pace-muted text-sm">Language</span>
-                  <span className="text-pace-text text-sm font-medium">{user.language}</span>
-                </div>
-              )}
-              {user.pets && (
-                <div className="flex justify-between">
-                  <span className="text-pace-muted text-sm">Pets</span>
-                  <span className="text-pace-text text-sm font-medium">{user.pets}</span>
-                </div>
-              )}
+              {user.language && <div className="flex justify-between"><span className="text-pace-muted text-sm">Language</span><span className="text-pace-text text-sm font-medium">{user.language}</span></div>}
+              {user.pets     && <div className="flex justify-between"><span className="text-pace-muted text-sm">Pets</span><span className="text-pace-text text-sm font-medium">{user.pets}</span></div>}
             </div>
           </div>
         )}
 
         {/* Sign out */}
         <div className="mx-4 mb-6">
-          <button
-            onClick={handleSignOut}
-            className="w-full py-4 text-pace-rose text-sm font-semibold rounded-2xl border border-pace-rose/30 bg-pace-rose/5 active:opacity-80 transition-opacity"
-          >
+          <button onClick={handleSignOut} className="w-full py-4 text-pace-rose text-sm font-semibold rounded-2xl border border-pace-rose/30 bg-pace-rose/5 active:opacity-80 transition-opacity">
             Sign out
           </button>
         </div>
@@ -236,95 +258,110 @@ export default function Profile() {
 
       <BottomNav />
 
-      {/* Edit account bottom sheet */}
+      {/* ── Edit sheet ── */}
       <AnimatePresence>
         {editOpen && (
           <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/30 z-10" onClick={() => setEditOpen(false)} />
+
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/30 z-10"
-              onClick={() => setEditOpen(false)}
-            />
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="absolute bottom-0 left-0 right-0 bg-pace-bg rounded-t-3xl z-20 max-h-[85%] flex flex-col"
+              className="absolute bottom-0 left-0 right-0 bg-pace-bg rounded-t-3xl z-20 max-h-[92%] flex flex-col"
             >
-              {/* Handle + header */}
+              {/* Sheet header */}
               <div className="flex items-center justify-between px-6 pt-4 pb-3 border-b border-pace-border flex-shrink-0">
-                <h3 className="text-pace-text font-semibold text-base">Edit account</h3>
+                <h3 className="text-pace-text font-semibold text-base">Edit profile</h3>
                 <button onClick={() => setEditOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-pace-card">
                   <X size={16} className="text-pace-secondary" />
                 </button>
               </div>
 
-              <div className="overflow-y-auto scrollbar-hide px-6 py-4 flex flex-col gap-5">
-                {/* Profile info */}
-                <div className="flex flex-col gap-3">
-                  <p className="text-pace-muted text-xs font-medium uppercase tracking-widest">Profile</p>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <p className="text-pace-muted text-xs mb-1">First name</p>
-                      <EditInput value={editForm.firstName} onChange={setField('firstName')} placeholder="First name" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-pace-muted text-xs mb-1">Last name</p>
-                      <EditInput value={editForm.lastName} onChange={setField('lastName')} placeholder="Last name" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-pace-muted text-xs mb-1">Email</p>
-                    <EditInput value={editForm.email} onChange={setField('email')} placeholder="Email" type="email" />
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <p className="text-pace-muted text-xs mb-1">Town</p>
-                      <EditInput value={editForm.town} onChange={setField('town')} placeholder="Town" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-pace-muted text-xs mb-1">Country</p>
-                      <EditInput value={editForm.country} onChange={setField('country')} placeholder="Country" />
-                    </div>
-                  </div>
-                  <button
-                    onClick={saveProfile}
-                    className="w-full py-3 bg-pace-green text-white text-sm font-semibold rounded-xl active:opacity-80 transition-opacity"
-                  >
-                    Save changes
-                  </button>
+              <div className="overflow-y-auto scrollbar-hide px-6 py-4 flex flex-col gap-4">
+
+                {/* ── Account ── */}
+                <SectionHeader title="Account" />
+                <EInput label="Email" value={editForm.email} onChange={sf('email')} type="email" placeholder="you@email.com" />
+
+                {/* ── Personal ── */}
+                <SectionHeader title="Personal" />
+                <div className="flex gap-3">
+                  <div className="flex-1"><EInput label="First name" value={editForm.firstName} onChange={sf('firstName')} placeholder="First name" /></div>
+                  <div className="flex-1"><EInput label="Last name"  value={editForm.lastName}  onChange={sf('lastName')}  placeholder="Last name"  /></div>
+                </div>
+                <ESelect label="Gender" value={editForm.gender} onChange={sf('gender')}
+                  options={['Male', 'Female', 'Other']} placeholder="Select gender" />
+                <div>
+                  <EInput label="Age" value={editForm.age} onChange={(v) => { sf('age')(v); setAgeTouched(true) }} type="number" placeholder="Your age" />
+                  {ageTouched && ageInvalid && <p className="text-pace-rose text-xs mt-1">Must be at least 18 years old</p>}
                 </div>
 
-                {/* Password change */}
-                <div className="flex flex-col gap-3">
-                  <p className="text-pace-muted text-xs font-medium uppercase tracking-widest">Change password</p>
-                  <div>
-                    <p className="text-pace-muted text-xs mb-1">Current password</p>
-                    <EditInput value={pw.current} onChange={(v) => { setPw((p) => ({ ...p, current: v })); setPwSaved(false); setPwError('') }} placeholder="Enter current password" type="password" />
-                  </div>
-                  <div>
-                    <p className="text-pace-muted text-xs mb-1">New password</p>
-                    <EditInput value={pw.next} onChange={(v) => { setPw((p) => ({ ...p, next: v })); setPwSaved(false); setPwError('') }} placeholder="At least 8 characters" type="password" />
-                  </div>
-                  <div>
-                    <p className="text-pace-muted text-xs mb-1">Confirm new password</p>
-                    <EditInput value={pw.confirm} onChange={(v) => { setPw((p) => ({ ...p, confirm: v })); setPwSaved(false); setPwError('') }} placeholder="Repeat new password" type="password" />
-                  </div>
-                  {pwError && <p className="text-pace-rose text-xs">{pwError}</p>}
-                  {pwSaved && <p className="text-pace-green text-xs">Password updated successfully</p>}
-                  <button
-                    onClick={savePassword}
-                    disabled={!pw.current || !pw.next || !pw.confirm}
-                    className="w-full py-3 bg-pace-text text-white text-sm font-semibold rounded-xl disabled:opacity-40 active:opacity-80 transition-opacity"
-                  >
-                    Update password
-                  </button>
-                </div>
+                {/* ── Location ── */}
+                <SectionHeader title="Location" />
+                <ESearchable label="Country" value={editForm.country} onChange={sf('country')} options={COUNTRIES} placeholder="Search your country" />
+                <EInput label="ZIP Code" value={editForm.zipCode} onChange={sf('zipCode')} placeholder="Postal code" />
 
-                <div className="pb-4" />
+                {/* ── Optional ── */}
+                <SectionHeader title="More about you" />
+                <ESelect label="Occupation" value={editForm.occupation} onChange={sf('occupation')}
+                  options={['Student', 'Full-time work', 'Part-time', 'Retired', 'Unemployed']} placeholder="Select status" />
+                <ESearchable label="Language" value={editForm.language} onChange={sf('language')} options={LANGUAGES} placeholder="Search your language" />
+                <ESelect label="Pets" value={editForm.pets} onChange={sf('pets')}
+                  options={['Yes', 'No']} placeholder="Do you have pets?" />
+
+                {/* ── Interests ── */}
+                <SectionHeader title="Interests" />
+                {Object.entries(INTERESTS).map(([category, items]) => (
+                  <div key={category}>
+                    <p className="text-pace-muted text-xs mb-2">{category}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {items.map((item) => {
+                        const selected = (editForm.interests || []).includes(item)
+                        return (
+                          <button key={item} onClick={() => toggleInterest(item)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                              selected ? 'bg-pace-green border-pace-green text-white' : 'bg-white border-pace-border text-pace-secondary'
+                            }`}>
+                            {item}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Save */}
+                <button
+                  onClick={saveProfile}
+                  disabled={!!ageInvalid}
+                  className="mt-2 w-full py-3.5 bg-pace-green text-white text-sm font-semibold rounded-xl disabled:opacity-40 active:opacity-80 transition-opacity"
+                >
+                  Save changes
+                </button>
+
+                {/* ── Password ── */}
+                <SectionHeader title="Change password" />
+                <EInput label="Current password" value={pw.current}
+                  onChange={(v) => { setPw((p) => ({ ...p, current: v })); setPwSaved(false); setPwError('') }}
+                  type="password" placeholder="Enter current password" />
+                <EInput label="New password" value={pw.next}
+                  onChange={(v) => { setPw((p) => ({ ...p, next: v })); setPwSaved(false); setPwError('') }}
+                  type="password" placeholder="At least 8 characters" />
+                <EInput label="Confirm new password" value={pw.confirm}
+                  onChange={(v) => { setPw((p) => ({ ...p, confirm: v })); setPwSaved(false); setPwError('') }}
+                  type="password" placeholder="Repeat new password" />
+                {pwError  && <p className="text-pace-rose text-xs">{pwError}</p>}
+                {pwSaved  && <p className="text-pace-green text-xs">Password updated successfully</p>}
+                <button
+                  onClick={savePassword}
+                  disabled={!pw.current || !pw.next || !pw.confirm}
+                  className="w-full py-3.5 bg-pace-text text-white text-sm font-semibold rounded-xl disabled:opacity-40 active:opacity-80 transition-opacity"
+                >
+                  Update password
+                </button>
+
+                <div className="pb-6" />
               </div>
             </motion.div>
           </>
