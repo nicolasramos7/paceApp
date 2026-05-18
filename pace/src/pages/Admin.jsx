@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { useStore } from '../store/useStore'
-import { demoAggregateStats } from '../data/demoUsers'
+import { demoUsers } from '../data/demoUsers'
+import { buildAggregateStats } from '../lib/adminStats'
 import { ArrowLeft, Users, Clock, TrendingUp, Activity } from 'lucide-react'
 
 const COLORS = ['#7DC9A0', '#9B8ECD', '#7BAFD4', '#F5C06B', '#F2A0AE', '#F0976A']
@@ -47,20 +48,35 @@ function HeatmapCell({ value }) {
   )
 }
 
+function getLocalUserWithLogs(user, logs) {
+  if (!user) return null
+
+  const dailyLogs = Object.entries(logs).map(([date, log]) => ({
+    date,
+    ...log,
+  }))
+
+  return {
+    id: user.id || 'local-user',
+    name: user.firstName || 'You',
+    age: Number(user.age) || 0,
+    zipCode: user.zipCode,
+    town: user.town,
+    gender: user.gender,
+    occupation: user.occupation,
+    interests: user.interests || [],
+    dailyLogs,
+  }
+}
+
 export default function Admin() {
   const navigate = useNavigate()
+  const user = useStore((s) => s.user)
   const logs = useStore((s) => s.logs)
 
-  const stats = demoAggregateStats
-  const totalTrackedDays = Object.keys(logs).length
-
-  const socialScore = Object.values(logs).length > 0
-    ? Math.round(
-        Object.values(logs).reduce((acc, l) => {
-          return acc + (l.socialFulfillment || (l.social === 'conversations' ? 80 : l.social === 'minimal' ? 40 : 20))
-        }, 0) / Object.values(logs).length
-      )
-    : null
+  const localUser = getLocalUserWithLogs(user, logs)
+  const users = localUser?.dailyLogs.length ? [...demoUsers, localUser] : demoUsers
+  const stats = buildAggregateStats(users)
 
   return (
     <div className="min-h-screen bg-[#F4F4F8] font-sans">
@@ -94,7 +110,7 @@ export default function Admin() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Population Wellness Overview</h1>
           <p className="text-gray-400 text-sm">
-            Anonymous aggregate statistics only. No individual user data is visible.
+            Anonymous aggregate patterns from account details and daily activity logs only.
           </p>
         </div>
 
@@ -105,7 +121,7 @@ export default function Admin() {
             iconBg="#E8F7F0"
             iconColor="#7DC9A0"
             label="Total Users"
-            value={stats.totalUsers + (totalTrackedDays > 0 ? 1 : 0)}
+            value={stats.totalUsers}
             sublabel="Registered in area"
           />
           <StatCard
@@ -131,7 +147,7 @@ export default function Admin() {
             iconBg="#EEECFB"
             iconColor="#9B8ECD"
             label="Social Fulfillment"
-            value={socialScore || 54}
+            value={stats.socialFulfillment}
             unit="/100"
             sublabel="avg score this week"
           />
@@ -208,8 +224,8 @@ export default function Admin() {
         <div className="grid grid-cols-3 gap-6 mb-6">
           {/* Most desired activities */}
           <div className="col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h2 className="text-gray-900 font-semibold text-sm mb-1">Most Desired Activities</h2>
-            <p className="text-gray-400 text-xs mb-5">What residents wish they were doing more — infrastructure insights</p>
+            <h2 className="text-gray-900 font-semibold text-sm mb-1">Unmet Activity Demand</h2>
+            <p className="text-gray-400 text-xs mb-5">What residents repeatedly wish they were doing more — useful for low-pressure community programming</p>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={stats.mostDesiredActivities} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#F4F4F8" horizontal={false} />
@@ -218,7 +234,7 @@ export default function Admin() {
                 <Tooltip
                   contentStyle={{ border: 'none', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: 12 }}
                 />
-                <Bar dataKey="count" name="Users interested" radius={[0, 6, 6, 0]}>
+                <Bar dataKey="count" name="Unmet activity signals" radius={[0, 6, 6, 0]}>
                   {stats.mostDesiredActivities.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
@@ -249,29 +265,27 @@ export default function Admin() {
 
         {/* Unmet activities heatmap */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
-          <h2 className="text-gray-900 font-semibold text-sm mb-1">Unmet Activity Heatmap by Area</h2>
+          <h2 className="text-gray-900 font-semibold text-sm mb-1">Connection Opportunity Heatmap by Area</h2>
           <p className="text-gray-400 text-xs mb-5">
-            Percentage of users per area wishing they could do each activity — use this to prioritise infrastructure
+            Percentage of daily logs per area where residents wished for each activity — use this to prioritise social infrastructure
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr>
                   <th className="text-left px-3 py-2 text-gray-400 text-xs font-medium">Area</th>
-                  <th className="px-3 py-2 text-gray-400 text-xs font-medium">Coffee chats</th>
-                  <th className="px-3 py-2 text-gray-400 text-xs font-medium">Walking</th>
-                  <th className="px-3 py-2 text-gray-400 text-xs font-medium">Local events</th>
-                  <th className="px-3 py-2 text-gray-400 text-xs font-medium">Yoga</th>
+                  {stats.heatmapActivities.map((activity) => (
+                    <th key={activity} className="px-3 py-2 text-gray-400 text-xs font-medium">{activity}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {stats.unmetActivitiesHeatmap.map((row) => (
                   <tr key={row.area}>
                     <td className="px-3 py-2 text-gray-700 font-medium text-sm">{row.area}</td>
-                    <HeatmapCell value={row.coffee} />
-                    <HeatmapCell value={row.walking} />
-                    <HeatmapCell value={row.events} />
-                    <HeatmapCell value={row.yoga} />
+                    {row.activities.map((activity) => (
+                      <HeatmapCell key={activity.name} value={activity.value} />
+                    ))}
                   </tr>
                 ))}
               </tbody>

@@ -1,3 +1,5 @@
+import { buildAggregateStats } from '../lib/adminStats'
+
 export const demoUsers = [
   {
     id: 'u1',
@@ -10,6 +12,15 @@ export const demoUsers = [
     interests: ['Walking', 'Coffee chats', 'Books', 'Photography'],
     avatar: 'SO',
     color: '#7DC9A0',
+    dailyLogs: [
+      { date: '2026-04-07', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Coffee chats'] },
+      { date: '2026-04-14', sleep: 'low', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['taken a walk outside', 'called a friend'] },
+      { date: '2026-04-21', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'long', wouldveLiked: ['Photography'] },
+      { date: '2026-04-28', sleep: 'low', movement: 'stayed', food: 'convenience', activity: 'low', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Coffee chats', 'Walking'] },
+      { date: '2026-05-05', sleep: 'good', movement: 'outside', food: 'home', activity: 'light', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Books'] },
+      { date: '2026-05-12', sleep: 'good', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Coffee chats'] },
+      { date: '2026-05-18', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Walking'] },
+    ],
   },
   {
     id: 'u2',
@@ -22,6 +33,15 @@ export const demoUsers = [
     interests: ['Hiking', 'Running', 'Music', 'Local events'],
     avatar: 'MA',
     color: '#9B8ECD',
+    dailyLogs: [
+      { date: '2026-04-07', sleep: 'low', movement: 'short', food: 'mixed', activity: 'productive', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Local events'] },
+      { date: '2026-04-14', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'long', wouldveLiked: ['Hiking'] },
+      { date: '2026-04-21', sleep: 'good', movement: 'outside', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'moderate', wouldveLiked: ['Music'] },
+      { date: '2026-04-28', sleep: 'low', movement: 'stayed', food: 'convenience', activity: 'low', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Running', 'Coffee chats'] },
+      { date: '2026-05-05', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'long', wouldveLiked: ['Local events'] },
+      { date: '2026-05-12', sleep: 'low', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Hiking'] },
+      { date: '2026-05-18', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Running'] },
+    ],
   },
   {
     id: 'u3',
@@ -34,6 +54,15 @@ export const demoUsers = [
     interests: ['Yoga', 'Art', 'Museums', 'Languages'],
     avatar: 'EL',
     color: '#F2A0AE',
+    dailyLogs: [
+      { date: '2026-04-07', sleep: 'good', movement: 'short', food: 'home', activity: 'productive', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Museums'] },
+      { date: '2026-04-14', sleep: 'good', movement: 'outside', food: 'home', activity: 'light', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Yoga'] },
+      { date: '2026-04-21', sleep: 'low', movement: 'stayed', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Art', 'Coffee chats'] },
+      { date: '2026-04-28', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Languages'] },
+      { date: '2026-05-05', sleep: 'low', movement: 'short', food: 'mixed', activity: 'low', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Museums'] },
+      { date: '2026-05-12', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Yoga'] },
+      { date: '2026-05-18', sleep: 'good', movement: 'short', food: 'home', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Art'] },
+    ],
   },
   {
     id: 'u4',
@@ -46,6 +75,15 @@ export const demoUsers = [
     interests: ['Gym', 'Cooking', 'Board games', 'Coffee chats'],
     avatar: 'LU',
     color: '#F5C06B',
+    dailyLogs: [
+      { date: '2026-04-07', sleep: 'low', movement: 'stayed', food: 'convenience', activity: 'low', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Gym', 'Coffee chats'] },
+      { date: '2026-04-14', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Board games'] },
+      { date: '2026-04-21', sleep: 'good', movement: 'short', food: 'home', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Cooking'] },
+      { date: '2026-04-28', sleep: 'low', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Coffee chats'] },
+      { date: '2026-05-05', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Gym'] },
+      { date: '2026-05-12', sleep: 'low', movement: 'stayed', food: 'convenience', activity: 'low', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Board games', 'Coffee chats'] },
+      { date: '2026-05-18', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Cooking'] },
+    ],
   },
   {
     id: 'u5',
@@ -58,6 +96,15 @@ export const demoUsers = [
     interests: ['Walking', 'Writing', 'Eating out', 'Exploring town'],
     avatar: 'MI',
     color: '#7BAFD4',
+    dailyLogs: [
+      { date: '2026-04-07', sleep: 'good', movement: 'outside', food: 'mixed', activity: 'productive', social: 'conversations', outsideTime: 'long', wouldveLiked: ['Walking'] },
+      { date: '2026-04-14', sleep: 'low', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Eating out'] },
+      { date: '2026-04-21', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'minimal', outsideTime: 'moderate', wouldveLiked: ['Writing'] },
+      { date: '2026-04-28', sleep: 'good', movement: 'outside', food: 'mixed', activity: 'light', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Exploring town'] },
+      { date: '2026-05-05', sleep: 'low', movement: 'stayed', food: 'convenience', activity: 'low', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Walking', 'Coffee chats'] },
+      { date: '2026-05-12', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Eating out'] },
+      { date: '2026-05-18', sleep: 'good', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Walking'] },
+    ],
   },
   {
     id: 'u6',
@@ -70,6 +117,15 @@ export const demoUsers = [
     interests: ['Cycling', 'Photography', 'Video games', 'Technology'],
     avatar: 'TO',
     color: '#F0976A',
+    dailyLogs: [
+      { date: '2026-04-07', sleep: 'low', movement: 'stayed', food: 'convenience', activity: 'low', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Cycling'] },
+      { date: '2026-04-14', sleep: 'good', movement: 'outside', food: 'mixed', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Photography'] },
+      { date: '2026-04-21', sleep: 'low', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Technology'] },
+      { date: '2026-04-28', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'minimal', outsideTime: 'moderate', wouldveLiked: ['Cycling', 'Coffee chats'] },
+      { date: '2026-05-05', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'long', wouldveLiked: ['Photography'] },
+      { date: '2026-05-12', sleep: 'low', movement: 'stayed', food: 'convenience', activity: 'low', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Video games'] },
+      { date: '2026-05-18', sleep: 'good', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Technology'] },
+    ],
   },
   {
     id: 'u7',
@@ -82,6 +138,15 @@ export const demoUsers = [
     interests: ['Books', 'Coffee chats', 'Museums', 'Learning'],
     avatar: 'AV',
     color: '#7DC9A0',
+    dailyLogs: [
+      { date: '2026-04-07', sleep: 'good', movement: 'short', food: 'home', activity: 'productive', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Books'] },
+      { date: '2026-04-14', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Coffee chats'] },
+      { date: '2026-04-21', sleep: 'low', movement: 'stayed', food: 'mixed', activity: 'low', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Museums'] },
+      { date: '2026-04-28', sleep: 'good', movement: 'short', food: 'home', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Learning'] },
+      { date: '2026-05-05', sleep: 'good', movement: 'outside', food: 'mixed', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Coffee chats'] },
+      { date: '2026-05-12', sleep: 'low', movement: 'short', food: 'convenience', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Books'] },
+      { date: '2026-05-18', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Museums'] },
+    ],
   },
   {
     id: 'u8',
@@ -94,47 +159,16 @@ export const demoUsers = [
     interests: ['Sports', 'Volunteering', 'Anime', 'Crafts'],
     avatar: 'DA',
     color: '#9B8ECD',
+    dailyLogs: [
+      { date: '2026-04-07', sleep: 'low', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Volunteering'] },
+      { date: '2026-04-14', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'long', wouldveLiked: ['Sports'] },
+      { date: '2026-04-21', sleep: 'good', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Crafts'] },
+      { date: '2026-04-28', sleep: 'low', movement: 'stayed', food: 'convenience', activity: 'low', social: 'minimal', outsideTime: 'none', wouldveLiked: ['Volunteering', 'Coffee chats'] },
+      { date: '2026-05-05', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Sports'] },
+      { date: '2026-05-12', sleep: 'good', movement: 'short', food: 'mixed', activity: 'light', social: 'minimal', outsideTime: 'short', wouldveLiked: ['Crafts'] },
+      { date: '2026-05-18', sleep: 'good', movement: 'outside', food: 'home', activity: 'productive', social: 'conversations', outsideTime: 'moderate', wouldveLiked: ['Volunteering'] },
+    ],
   },
 ]
 
-export const demoAggregateStats = {
-  totalUsers: 847,
-  lowSocialExposure: 34,
-  avgOutsideTimeMinutes: 68,
-  mostDesiredActivities: [
-    { name: 'Coffee chats', count: 312 },
-    { name: 'Walking', count: 287 },
-    { name: 'Local events', count: 241 },
-    { name: 'Hiking', count: 198 },
-    { name: 'Books', count: 176 },
-    { name: 'Yoga', count: 154 },
-  ],
-  weeklyTrend: [
-    { week: 'Apr 7', socialScore: 52, movementScore: 61 },
-    { week: 'Apr 14', socialScore: 48, movementScore: 58 },
-    { week: 'Apr 21', socialScore: 55, movementScore: 63 },
-    { week: 'Apr 28', socialScore: 51, movementScore: 60 },
-    { week: 'May 5', socialScore: 58, movementScore: 65 },
-    { week: 'May 12', socialScore: 54, movementScore: 62 },
-    { week: 'May 18', socialScore: 57, movementScore: 67 },
-  ],
-  activityByDemographic: [
-    { group: '18-25', social: 44, physical: 68, intellectual: 72 },
-    { group: '26-35', social: 58, physical: 62, intellectual: 65 },
-    { group: '36-50', social: 61, physical: 55, intellectual: 70 },
-    { group: '50+', social: 49, physical: 44, intellectual: 75 },
-  ],
-  outsideTimeDistribution: [
-    { label: 'None', value: 18 },
-    { label: 'Short', value: 32 },
-    { label: 'Moderate', value: 34 },
-    { label: 'Long', value: 16 },
-  ],
-  unmetActivitiesHeatmap: [
-    { area: 'Eixample', coffee: 89, walking: 71, events: 54, yoga: 43 },
-    { area: 'Gràcia', coffee: 67, walking: 93, events: 78, yoga: 61 },
-    { area: 'Poblenou', coffee: 54, walking: 62, events: 91, yoga: 38 },
-    { area: 'Sarrià', coffee: 72, walking: 58, events: 41, yoga: 87 },
-    { area: 'Sant Pere', coffee: 83, walking: 77, events: 66, yoga: 52 },
-  ],
-}
+export const demoAggregateStats = buildAggregateStats(demoUsers)

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { demoAggregateStats, demoUsers } from '../data/demoUsers'
+import { buildAggregateStats } from '../lib/adminStats'
 
 const openAiMocks = vi.hoisted(() => ({
   create: vi.fn(),
@@ -37,6 +38,13 @@ const footballUser = {
 const footballUsers = demoUsers.map((user) => ({
   ...user,
   interests: ['Football', 'Running', 'Outdoor games'],
+  dailyLogs: user.dailyLogs.map((log) => ({
+    ...log,
+    movement: 'outside',
+    outsideTime: 'long',
+    social: 'conversations',
+    wouldveLiked: ['played football', 'joined a casual football match'],
+  })),
 }))
 
 const footballWishes = ['played football', 'joined a casual football match', 'spent time at a local pitch']
@@ -280,9 +288,10 @@ describe('analyzeDayLog', () => {
 
 describe('demoAggregateStats admin dashboard data', () => {
   it('uses internally consistent dashboard source data', () => {
-    expect(demoAggregateStats.totalUsers).toBeGreaterThan(100)
+    expect(demoAggregateStats.totalUsers).toBe(demoUsers.length)
     expect(demoAggregateStats.weeklyTrend).toHaveLength(7)
     expect(demoAggregateStats.outsideTimeDistribution.reduce((sum, item) => sum + item.value, 0)).toBe(100)
+    expect(demoAggregateStats.socialFulfillment).toBeGreaterThan(0)
   })
 
   it('keeps all dashboard percentages and scores in the 0-100 range', () => {
@@ -294,7 +303,8 @@ describe('demoAggregateStats admin dashboard data', () => {
     }
 
     for (const row of demoAggregateStats.unmetActivitiesHeatmap) {
-      for (const value of [row.coffee, row.walking, row.events, row.yoga]) {
+      for (const activity of row.activities) {
+        const { value } = activity
         expect(value).toBeGreaterThanOrEqual(0)
         expect(value).toBeLessThanOrEqual(100)
       }
@@ -320,5 +330,20 @@ describe('demoAggregateStats admin dashboard data', () => {
       expect(matchedInterest, `${activity.name} should map to at least one demo user interest`).toBe(true)
       expect(activity.count).toBeGreaterThan(0)
     }
+  })
+
+  it('is derived from raw users and daily logs instead of preset aggregate numbers', () => {
+    const stats = buildAggregateStats(footballUsers)
+
+    expect(stats.totalUsers).toBe(footballUsers.length)
+    expect(stats.avgOutsideTimeMinutes).toBe(150)
+    expect(stats.lowSocialExposure).toBe(0)
+    expect(stats.mostDesiredActivities[0].name).toBe('Football')
+    expect(stats.mostDesiredActivities[0].count).toBe(footballUsers.length * footballUsers[0].dailyLogs.length)
+    expect(stats.weeklyTrend.every((week) => week.movementScore > 80)).toBe(true)
+    expect(stats.weeklyTrend.every((week) => week.socialScore > 80)).toBe(true)
+    expect(stats.unmetActivitiesHeatmap.every((row) =>
+      row.activities.some((activity) => activity.name === 'Football' && activity.value === 100)
+    )).toBe(true)
   })
 })
