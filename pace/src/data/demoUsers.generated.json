@@ -1,5 +1,26 @@
 [
   {
+    "id": "user_1779144513200",
+    "name": "Test User Test Last Name",
+    "age": 18,
+    "zipCode": "08022",
+    "town": "",
+    "country": "Spain",
+    "gender": "Other",
+    "occupation": "Retired",
+    "interests": [],
+    "avatar": "TU",
+    "color": "#F2A0AE",
+    "dailyLogs": [
+      {
+        "date": "2026-05-18",
+        "wouldveLiked": [
+          "Anime"
+        ]
+      }
+    ]
+  },
+  {
     "id": "user_1779143783446",
     "name": "Nico Ramos",
     "age": 18,
