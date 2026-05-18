@@ -71,9 +71,15 @@ export async function generatePlans(wouldveLiked, userProfile, demoUsers) {
 
   const matchedUsers = demoUsers
     .filter((u) =>
-      u.interests.some((i) =>
-        wouldveLiked.some((w) => w.toLowerCase().includes(i.toLowerCase()) || i.toLowerCase().includes(w.toLowerCase()))
-      )
+      u.interests.some((interest) => {
+        const interestWords = interest.toLowerCase().split(/[\s,]+/)
+        return wouldveLiked.some((w) => {
+          const likedWords = w.toLowerCase().split(/[\s,]+/).filter((lw) => lw.length > 3)
+          return interestWords.some((iw) =>
+            likedWords.some((lw) => lw.includes(iw) || iw.includes(lw))
+          )
+        })
+      })
     )
     .slice(0, 6)
 
