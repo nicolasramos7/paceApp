@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Send } from 'lucide-react'
+import { ChevronLeft, Send, LogOut } from 'lucide-react'
 import { useStore } from '../store/useStore'
 
 export default function PlanChat() {
@@ -10,11 +10,13 @@ export default function PlanChat() {
   const plans = useStore((s) => s.plans)
   const chats = useStore((s) => s.chats)
   const addMessage = useStore((s) => s.addMessage)
+  const updatePlan = useStore((s) => s.updatePlan)
 
   const plan = plans.find((p) => p.id === planId)
   const messages = chats[planId] || []
 
   const [input, setInput] = useState('')
+  const [confirmLeave, setConfirmLeave] = useState(false)
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -31,6 +33,11 @@ export default function PlanChat() {
       isMe: true,
     })
     setInput('')
+  }
+
+  const leaveChat = () => {
+    updatePlan(planId, { status: 'declined' })
+    navigate('/plans')
   }
 
   if (!plan) {
@@ -55,17 +62,29 @@ export default function PlanChat() {
           <h2 className="text-pace-text font-semibold text-sm leading-tight">{plan.title}</h2>
           <p className="text-pace-muted text-xs">{plan.participantNames.join(', ')}, you</p>
         </div>
-        <div className="flex -space-x-1.5">
-          {plan.participantNames.slice(0, 3).map((name, i) => (
-            <div
-              key={name}
-              className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white"
-              style={{ backgroundColor: ['#7DC9A0', '#9B8ECD', '#7BAFD4'][i] }}
+        {!confirmLeave ? (
+          <button
+            onClick={() => setConfirmLeave(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-xl active:bg-pace-bg transition-colors"
+          >
+            <LogOut size={16} className="text-pace-muted" />
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setConfirmLeave(false)}
+              className="px-3 py-1.5 text-xs text-pace-secondary border border-pace-border rounded-lg"
             >
-              {name[0]}
-            </div>
-          ))}
-        </div>
+              Stay
+            </button>
+            <button
+              onClick={leaveChat}
+              className="px-3 py-1.5 text-xs text-white bg-pace-rose rounded-lg"
+            >
+              Leave
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Plan info banner */}

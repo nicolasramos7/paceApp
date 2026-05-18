@@ -28,11 +28,13 @@ export default function Plans() {
   useEffect(() => {
     if (plans.length === 0 && allWouldveLiked.length > 0 && !loading) {
       setLoading(true)
-      generatePlans(allWouldveLiked, user, demoUsers).then((generated) => {
-        const withStatus = generated.map((p) => ({ ...p, status: 'pending' }))
-        setPlans(withStatus)
-        setLoading(false)
-      })
+      generatePlans(allWouldveLiked, user, demoUsers)
+        .then((generated) => {
+          const withStatus = (Array.isArray(generated) ? generated : []).map((p) => ({ ...p, status: 'pending' }))
+          setPlans(withStatus)
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false))
     }
   }, [])
 
@@ -59,6 +61,10 @@ export default function Plans() {
     }
   }
 
+  const handleCancel = (planId) => {
+    updatePlan(planId, { status: 'declined' })
+  }
+
   const handleDecline = (planId) => {
     setDeclineTarget(planId)
   }
@@ -70,7 +76,7 @@ export default function Plans() {
     setDeclineTarget(null)
   }
 
-  const openPlans = plans.filter((p) => p.status !== 'declined')
+  const openPlans = plans.filter((p) => p.status === 'pending')
   const acceptedPlans = plans.filter((p) => p.status === 'accepted')
 
   return (
@@ -120,7 +126,11 @@ export default function Plans() {
                 <h2 className="text-pace-text font-semibold text-sm mb-3">Your accepted plans</h2>
                 {acceptedPlans.map((plan) => (
                   <div key={plan.id} className="mb-3">
-                    <PlanCard plan={plan} status="accepted" />
+                    <PlanCard
+                      plan={plan}
+                      status="accepted"
+                      onCancel={() => handleCancel(plan.id)}
+                    />
                     <button
                       onClick={() => navigate(`/plans/${plan.id}/chat`)}
                       className="w-full mt-2 py-3 bg-pace-text text-white text-sm font-medium rounded-xl active:opacity-80 transition-opacity"
@@ -135,11 +145,13 @@ export default function Plans() {
             <button
               onClick={() => {
                 setLoading(true)
-                generatePlans(allWouldveLiked.length ? allWouldveLiked : ['coffee', 'walking'], user, demoUsers).then((generated) => {
-                  const withStatus = generated.map((p) => ({ ...p, id: `plan_${Date.now()}_${Math.random()}`, status: 'pending' }))
-                  setPlans([...plans.filter((p) => p.status !== 'pending'), ...withStatus])
-                  setLoading(false)
-                })
+                generatePlans(allWouldveLiked.length ? allWouldveLiked : ['coffee', 'walking'], user, demoUsers)
+                  .then((generated) => {
+                    const withStatus = (Array.isArray(generated) ? generated : []).map((p) => ({ ...p, id: `plan_${Date.now()}_${Math.random()}`, status: 'pending' }))
+                    setPlans([...plans.filter((p) => p.status !== 'pending'), ...withStatus])
+                  })
+                  .catch(() => {})
+                  .finally(() => setLoading(false))
               }}
               className="w-full py-3 border border-pace-border rounded-xl text-pace-secondary text-sm font-medium active:bg-pace-bg transition-colors"
             >

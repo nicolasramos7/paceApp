@@ -12,7 +12,7 @@ const typeColors = {
 function AvatarCluster({ names, colors }) {
   return (
     <div className="flex -space-x-2">
-      {names.slice(0, 4).map((name, i) => (
+      {(names || []).slice(0, 4).map((name, i) => (
         <div
           key={name}
           className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white"
@@ -27,7 +27,7 @@ function AvatarCluster({ names, colors }) {
 
 const avatarColors = ['#7DC9A0', '#9B8ECD', '#7BAFD4', '#F5C06B', '#F2A0AE']
 
-export default function PlanCard({ plan, onAccept, onDecline, status }) {
+export default function PlanCard({ plan, onAccept, onDecline, onCancel, status }) {
   const colors = typeColors[plan.activityType] || typeColors.social
   const accepted = status === 'accepted'
   const declined = status === 'declined'
@@ -91,13 +91,23 @@ export default function PlanCard({ plan, onAccept, onDecline, status }) {
         )}
 
         {accepted && (
-          <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-pace-green-light">
-            <div className="w-4 h-4 rounded-full bg-pace-green flex items-center justify-center">
-              <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-                <path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-pace-green-light">
+              <div className="w-4 h-4 rounded-full bg-pace-green flex items-center justify-center">
+                <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                  <path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <span className="text-pace-green text-sm font-medium">You're joining</span>
             </div>
-            <span className="text-pace-green text-sm font-medium">You're joining</span>
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                className="w-full py-2 text-pace-muted text-xs font-medium active:text-pace-rose transition-colors"
+              >
+                Cancel plan
+              </button>
+            )}
           </div>
         )}
 
