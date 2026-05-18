@@ -1,8 +1,104 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Check } from 'lucide-react'
 import { useStore } from '../store/useStore'
+
+const COUNTRIES = [
+  'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia',
+  'Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium',
+  'Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria',
+  'Burkina Faso','Burundi','Cabo Verde','Cambodia','Cameroon','Canada','Central African Republic',
+  'Chad','Chile','China','Colombia','Comoros','Congo','Costa Rica','Croatia','Cuba','Cyprus',
+  'Czech Republic','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt',
+  'El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland',
+  'France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea',
+  'Guinea-Bissau','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq',
+  'Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kuwait',
+  'Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania',
+  'Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands',
+  'Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro',
+  'Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand',
+  'Nicaragua','Niger','Nigeria','North Korea','North Macedonia','Norway','Oman','Pakistan',
+  'Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland',
+  'Portugal','Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia',
+  'Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia',
+  'Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia',
+  'Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka',
+  'Sudan','Suriname','Sweden','Switzerland','Syria','Taiwan','Tajikistan','Tanzania','Thailand',
+  'Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu',
+  'Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay',
+  'Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe',
+]
+
+const LANGUAGES = [
+  'English','Mandarin Chinese','Hindi','Spanish','French','Arabic','Bengali','Russian',
+  'Portuguese','Urdu','Indonesian','German','Japanese','Marathi','Telugu','Turkish',
+  'Tamil','Cantonese','Vietnamese','Korean','Tagalog','Persian','Swahili','Italian',
+  'Punjabi','Gujarati','Polish','Ukrainian','Dutch','Thai',
+]
+
+function SearchableSelect({ value, onChange, options, placeholder }) {
+  const [query, setQuery] = useState(value || '')
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => { setQuery(value || '') }, [value])
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filtered = (() => {
+    if (!query) return options
+    const q = query.toLowerCase()
+    const starts = options.filter((o) => o.toLowerCase().startsWith(q))
+    const contains = options.filter((o) => !o.toLowerCase().startsWith(q) && o.toLowerCase().includes(q))
+    return [...starts, ...contains]
+  })()
+
+  const handleSelect = (option) => {
+    onChange(option)
+    setQuery(option)
+    setOpen(false)
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <input
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); onChange(''); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        autoComplete="off"
+        className="w-full px-4 py-3 rounded-xl bg-pace-bg border border-pace-border text-pace-text text-sm placeholder-pace-muted outline-none focus:border-pace-green transition-colors"
+      />
+      {open && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-pace-border rounded-xl shadow-lg max-h-44 overflow-y-auto">
+          {filtered.length > 0 ? (
+            filtered.map((option) => (
+              <button
+                key={option}
+                onMouseDown={() => handleSelect(option)}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                  option === value
+                    ? 'text-pace-green bg-pace-green-light font-medium'
+                    : 'text-pace-text hover:bg-pace-bg'
+                }`}
+              >
+                {option}
+              </button>
+            ))
+          ) : (
+            <p className="px-4 py-3 text-pace-muted text-sm">No results found</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const INTERESTS = {
   Active: ['Walking', 'Hiking', 'Gym', 'Running', 'Sports', 'Yoga', 'Cycling'],
@@ -217,10 +313,7 @@ export default function Onboarding() {
       <p className="text-pace-muted text-sm mb-6">Used to suggest nearby activities. We never share exact addresses.</p>
       <div className="flex flex-col gap-4 flex-1">
         <Field label="Country" required>
-          <Input value={form.country} onChange={set('country')} placeholder="Your country" />
-        </Field>
-        <Field label="Town" required>
-          <Input value={form.town} onChange={set('town')} placeholder="Your town or city" />
+          <SearchableSelect value={form.country} onChange={set('country')} options={COUNTRIES} placeholder="Search your country" />
         </Field>
         <Field label="ZIP Code" required>
           <Input value={form.zipCode} onChange={set('zipCode')} placeholder="Postal code" />
@@ -232,7 +325,7 @@ export default function Onboarding() {
         </button>
         <button
           onClick={goNext}
-          disabled={!form.country || !form.town || !form.zipCode}
+          disabled={!form.country || !form.zipCode}
           className="flex-1 py-3.5 bg-pace-green text-white font-semibold rounded-xl disabled:opacity-40 transition-opacity"
         >
           Continue
@@ -255,7 +348,7 @@ export default function Onboarding() {
           />
         </Field>
         <Field label="Language">
-          <Input value={form.language} onChange={set('language')} placeholder="e.g. English, Spanish" />
+          <SearchableSelect value={form.language} onChange={set('language')} options={LANGUAGES} placeholder="Search your language" />
         </Field>
         <Field label="Pets">
           <Select
