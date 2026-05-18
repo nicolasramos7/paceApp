@@ -1,6 +1,7 @@
 import { buildAggregateStats } from '../lib/adminStats'
+import generatedUsers from './demoUsers.generated.json'
 
-export const demoUsers = [
+const BASE_USERS = [
   {
     id: 'u1',
     name: 'Sofia',
@@ -170,5 +171,8 @@ export const demoUsers = [
     ],
   },
 ]
+
+const generatedIds = new Set(generatedUsers.map((u) => u.id))
+export const demoUsers = [...BASE_USERS.filter((u) => !generatedIds.has(u.id)), ...generatedUsers]
 
 export const demoAggregateStats = buildAggregateStats(demoUsers)

@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const demoParticipantsPath = path.join(__dirname, '.demo/demoParticipants.json')
+const demoParticipantsPath = path.join(__dirname, 'src/data/demoUsers.generated.json')
 
 async function readDemoParticipants() {
   try {
@@ -16,7 +16,6 @@ async function readDemoParticipants() {
 }
 
 async function writeDemoParticipants(users) {
-  await fs.mkdir(path.dirname(demoParticipantsPath), { recursive: true })
   await fs.writeFile(demoParticipantsPath, `${JSON.stringify(users, null, 2)}\n`)
 }
 
