@@ -31,6 +31,23 @@ const COUNTRIES = [
   'Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe',
 ]
 
+// Countries supported by Zippopotam.us — others skip validation
+const COUNTRY_CODES = {
+  'Algeria':'DZ','Andorra':'AD','Argentina':'AR','Australia':'AU','Austria':'AT',
+  'Azerbaijan':'AZ','Bangladesh':'BD','Belarus':'BY','Belgium':'BE','Brazil':'BR',
+  'Bulgaria':'BG','Canada':'CA','Croatia':'HR','Czech Republic':'CZ','Denmark':'DK',
+  'Dominican Republic':'DO','Estonia':'EE','Finland':'FI','France':'FR','Germany':'DE',
+  'Guatemala':'GT','Hungary':'HU','Iceland':'IS','India':'IN','Ireland':'IE','Italy':'IT',
+  'Japan':'JP','Latvia':'LV','Liechtenstein':'LI','Lithuania':'LT','Luxembourg':'LU',
+  'Malawi':'MW','Malaysia':'MY','Malta':'MT','Marshall Islands':'MH','Mexico':'MX',
+  'Moldova':'MD','Monaco':'MC','Morocco':'MA','Netherlands':'NL','New Zealand':'NZ',
+  'North Macedonia':'MK','Norway':'NO','Pakistan':'PK','Philippines':'PH','Poland':'PL',
+  'Portugal':'PT','Romania':'RO','Russia':'RU','San Marino':'SM','Slovakia':'SK',
+  'Slovenia':'SI','South Africa':'ZA','Spain':'ES','Sweden':'SE','Switzerland':'CH',
+  'Thailand':'TH','Turkey':'TR','Ukraine':'UA','United Kingdom':'GB','United States':'US',
+  'Uruguay':'UY','Vatican City':'VA',
+}
+
 const LANGUAGES = [
   'English','Mandarin Chinese','Hindi','Spanish','French','Arabic','Bengali','Russian',
   'Portuguese','Urdu','Indonesian','German','Japanese','Marathi','Telugu','Turkish',
@@ -201,8 +218,34 @@ export default function Onboarding() {
 
   const [accountAttempted, setAccountAttempted] = useState(false)
   const [emailTouched, setEmailTouched] = useState(false)
+  const [zipStatus, setZipStatus] = useState('idle') // idle | checking | valid | invalid | unsupported
+  const [zipPlace, setZipPlace] = useState('')
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  useEffect(() => {
+    const code = COUNTRY_CODES[form.country]
+    if (!form.zipCode || !form.country) { setZipStatus('idle'); setZipPlace(''); return }
+    if (!code) { setZipStatus('unsupported'); setZipPlace(''); return }
+
+    setZipStatus('checking')
+    setZipPlace('')
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://api.zippopotam.us/${code}/${form.zipCode}`)
+        if (res.ok) {
+          const data = await res.json()
+          setZipPlace(data.places?.[0]?.['place name'] || '')
+          setZipStatus('valid')
+        } else {
+          setZipStatus('invalid')
+        }
+      } catch {
+        setZipStatus('idle') // network error — don't block the user
+      }
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [form.country, form.zipCode])
 
   const goNext = () => { setDir(1); setStep((s) => s + 1) }
   const goBack = () => {
@@ -317,6 +360,18 @@ export default function Onboarding() {
         </Field>
         <Field label="ZIP Code" required>
           <Input value={form.zipCode} onChange={set('zipCode')} placeholder="Postal code" />
+          {zipStatus === 'checking' && (
+            <p className="text-pace-muted text-xs mt-1 flex items-center gap-1">
+              <span className="inline-block w-3 h-3 border border-pace-muted border-t-transparent rounded-full animate-spin" />
+              Verifying…
+            </p>
+          )}
+          {zipStatus === 'valid' && (
+            <p className="text-pace-green text-xs mt-1">✓ {zipPlace || 'Valid postcode'}</p>
+          )}
+          {zipStatus === 'invalid' && (
+            <p className="text-pace-rose text-xs mt-1">ZIP code not found in {form.country}</p>
+          )}
         </Field>
       </div>
       <div className="flex gap-3 pb-6">
@@ -325,7 +380,7 @@ export default function Onboarding() {
         </button>
         <button
           onClick={goNext}
-          disabled={!form.country || !form.zipCode}
+          disabled={!form.country || !form.zipCode || zipStatus === 'checking' || zipStatus === 'invalid'}
           className="flex-1 py-3.5 bg-pace-green text-white font-semibold rounded-xl disabled:opacity-40 transition-opacity"
         >
           Continue
