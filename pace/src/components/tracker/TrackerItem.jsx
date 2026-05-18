@@ -27,8 +27,8 @@ const valueLabels = {
   long: 'Long',
 }
 
-export default function TrackerItem({ icon: Icon, iconBg, iconColor, title, subtitle, fieldKey, value, onClick }) {
-  const displayValue = value ? (valueLabels[value] || value) : null
+export default function TrackerItem({ icon: Icon, iconBg, iconColor, title, subtitle, fieldKey, value, valueDisplay, onClick }) {
+  const displayValue = valueDisplay ?? (value ? (valueLabels[value] || value) : null)
 
   return (
     <button

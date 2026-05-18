@@ -58,7 +58,14 @@ User profile: ${JSON.stringify({ age: userProfile.age, occupation: userProfile.o
 Day log:
 - Sleep: ${log.sleep || 'not logged'}
 - Movement: ${log.movement || 'not logged'}
-- Food: ${log.food || 'not logged'}
+- Meals: ${
+  log.meals
+    ? Object.entries(log.meals)
+        .filter(([, v]) => v?.type)
+        .map(([k, v]) => `${k}: ${v.type}${v.description ? ` (${v.description})` : ''}`)
+        .join(', ') || 'not logged'
+    : log.food || 'not logged'
+}
 - Activity level: ${log.activity || 'not logged'}
 - Social exposure: ${log.social || 'not logged'}
 - Outside time: ${log.outsideTime || 'not logged'}

@@ -9,6 +9,7 @@ import DaySelector from '../components/tracker/DaySelector'
 import TodaySummary from '../components/tracker/TodaySummary'
 import TrackerItem from '../components/tracker/TrackerItem'
 import TrackModal from '../components/tracker/TrackModal'
+import MealsModal from '../components/tracker/MealsModal'
 import WouldveLiked from '../components/tracker/WouldveLiked'
 import { analyzeDayLog } from '../lib/openai'
 
@@ -40,18 +41,13 @@ const TRACKER_CONFIG = [
     ],
   },
   {
-    key: 'food',
+    key: 'meals',
     icon: Utensils,
     iconBg: '#FEF0E7',
     iconColor: '#F0976A',
     title: 'Meals',
     subtitle: 'What you ate today',
-    options: [
-      { value: 'home', label: 'Home cooked', description: 'Prepared at home', Icon: Utensils, iconBg: '#E8F7F0', iconColor: '#7DC9A0' },
-      { value: 'mixed', label: 'Mixed', description: 'Home and takeout', Icon: Utensils, iconBg: '#FEF4DF', iconColor: '#F5C06B' },
-      { value: 'convenience', label: 'Convenience food', description: 'Mostly takeout or packaged', Icon: Utensils, iconBg: '#FEF0E7', iconColor: '#F0976A' },
-      { value: 'skipped', label: 'Skipped meals', description: 'Missed one or more meals', Icon: Utensils, iconBg: '#FEEFF2', iconColor: '#F2A0AE' },
-    ],
+    options: [],
   },
   {
     key: 'activity',
@@ -106,11 +102,24 @@ export default function Today() {
   const isReadOnly = selectedDate !== today && selectedDate !== yesterday
 
   const [openModal, setOpenModal] = useState(null)
+  const [mealsOpen, setMealsOpen] = useState(false)
   const [momentInput, setMomentInput] = useState('')
   const [momentOpen, setMomentOpen] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
 
-  const loggedCount = TRACKER_CONFIG.filter((c) => log[c.key]).length
+  const mealsLogged = log.meals && Object.values(log.meals).some((m) => m?.type)
+  const mealsDisplay = (() => {
+    if (!log.meals) return null
+    const entries = Object.entries(log.meals).filter(([, v]) => v?.type)
+    if (!entries.length) return null
+    const nonSkipped = entries.filter(([, v]) => v.type !== 'skipped')
+    if (!nonSkipped.length) return 'All skipped'
+    return nonSkipped.map(([k]) => k[0].toUpperCase() + k.slice(1)).join(', ')
+  })()
+
+  const loggedCount = TRACKER_CONFIG.filter((c) =>
+    c.key === 'meals' ? mealsLogged : log[c.key]
+  ).length
 
   useEffect(() => {
     if (isToday && loggedCount >= 3 && !log.insight && !analyzing) {
@@ -186,8 +195,12 @@ export default function Today() {
               <TrackerItem
                 key={config.key}
                 {...config}
-                value={log[config.key]}
-                onClick={() => !isReadOnly && setOpenModal(config.key)}
+                value={config.key === 'meals' ? null : log[config.key]}
+                valueDisplay={config.key === 'meals' ? mealsDisplay : undefined}
+                onClick={() => {
+                  if (isReadOnly) return
+                  config.key === 'meals' ? setMealsOpen(true) : setOpenModal(config.key)
+                }}
               />
             ))}
           </div>
@@ -278,7 +291,7 @@ export default function Today() {
       </div>
 
       {/* Tracker modals */}
-      {TRACKER_CONFIG.map((config) => (
+      {TRACKER_CONFIG.filter((c) => c.key !== 'meals').map((config) => (
         <TrackModal
           key={config.key}
           open={openModal === config.key}
@@ -289,6 +302,12 @@ export default function Today() {
           onChange={(val) => handleTrack(config.key, val)}
         />
       ))}
+      <MealsModal
+        open={mealsOpen}
+        onClose={() => setMealsOpen(false)}
+        value={log.meals}
+        onChange={(meals) => updateLog(selectedDate, { meals })}
+      />
 
       <BottomNav />
     </div>

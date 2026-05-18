@@ -3,7 +3,7 @@ import { useStore } from '../../store/useStore'
 const dotColors = {
   sleep: 'bg-pace-purple',
   movement: 'bg-pace-blue',
-  food: 'bg-pace-orange',
+  meals: 'bg-pace-orange',
   activity: 'bg-pace-green',
   social: 'bg-pace-rose',
   outsideTime: 'bg-pace-amber',
@@ -19,12 +19,6 @@ const summaryLabels = {
     outside: 'Went outside today',
     short: 'Took a short trip',
     stayed: 'Stayed home today',
-  },
-  food: {
-    home: 'Cooked at home',
-    mixed: 'Mixed meals today',
-    convenience: 'Convenience food day',
-    skipped: 'Skipped some meals',
   },
   activity: {
     productive: 'Productive day',
@@ -44,6 +38,17 @@ const summaryLabels = {
   },
 }
 
+function getMealsSummary(meals) {
+  if (!meals) return null
+  const entries = Object.entries(meals).filter(([, v]) => v?.type)
+  if (!entries.length) return null
+  const nonSkipped = entries.filter(([, v]) => v.type !== 'skipped')
+  if (!nonSkipped.length) return 'Skipped all meals'
+  return nonSkipped
+    .map(([k, v]) => `${k[0].toUpperCase() + k.slice(1)}${v.description ? `: ${v.description}` : ''}`)
+    .join(' · ')
+}
+
 export default function TodaySummary({ log, insight }) {
   const selectedDate = useStore((s) => s.selectedDate)
   const today = new Date().toISOString().split('T')[0]
@@ -56,6 +61,11 @@ export default function TodaySummary({ log, insight }) {
       label: summaryLabels[key][log[key]] || log[key],
       color: dotColors[key],
     }))
+
+  const mealsSummary = getMealsSummary(log.meals)
+  if (mealsSummary) {
+    entries.push({ key: 'meals', label: mealsSummary, color: dotColors.meals })
+  }
 
   return (
     <div className="px-6 py-4">
