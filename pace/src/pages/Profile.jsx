@@ -109,6 +109,7 @@ export default function Profile() {
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
   const [pwError, setPwError] = useState('')
   const [pwSaved, setPwSaved] = useState(false)
+  const [pwResetMsg, setPwResetMsg] = useState(false)
   const [ageTouched, setAgeTouched] = useState(false)
   const [zipStatus, setZipStatus] = useState('idle') // idle | checking | valid | invalid | unsupported
   const [zipPlace, setZipPlace] = useState('')
@@ -154,6 +155,7 @@ export default function Profile() {
     setPw({ current: '', next: '', confirm: '' })
     setPwError('')
     setPwSaved(false)
+    setPwResetMsg(false)
     setAgeTouched(false)
     setZipStatus('idle')
     setZipPlace('')
@@ -278,7 +280,7 @@ export default function Profile() {
 
         {/* Sign out */}
         <div className="mx-4 mb-6">
-          <button onClick={handleSignOut} className="w-full py-4 text-pace-rose text-sm font-semibold rounded-2xl border border-pace-rose/30 bg-pace-rose/5 active:opacity-80 transition-opacity">
+          <button onClick={handleSignOut} className="w-full py-4 text-red-600 text-sm font-semibold rounded-2xl border border-red-400/50 bg-red-50 active:opacity-80 transition-opacity">
             Sign out
           </button>
         </div>
@@ -306,7 +308,7 @@ export default function Profile() {
                 </button>
               </div>
 
-              <div className="overflow-y-auto scrollbar-hide px-6 py-4 flex flex-col gap-4">
+              <div className="overflow-y-auto scrollbar-hide flex-1 px-6 py-4 flex flex-col gap-4">
 
                 {/* ── Account ── */}
                 <SectionHeader title="Account" />
@@ -379,20 +381,31 @@ export default function Profile() {
                   </div>
                 ))}
 
-                {/* Save */}
-                <button
-                  onClick={saveProfile}
-                  disabled={!!ageInvalid || zipStatus === 'invalid' || zipStatus === 'checking'}
-                  className="mt-2 w-full py-3.5 bg-pace-green text-white text-sm font-semibold rounded-xl disabled:opacity-40 active:opacity-80 transition-opacity"
-                >
-                  Save changes
-                </button>
+                {/* ── Save changes (sticky) ── */}
+                <div className="sticky bottom-0 bg-pace-bg pt-2 pb-1 -mx-6 px-6 border-t border-pace-border">
+                  <button
+                    onClick={saveProfile}
+                    disabled={!!ageInvalid || zipStatus === 'invalid' || zipStatus === 'checking'}
+                    className="w-full py-3.5 bg-pace-green text-white text-sm font-semibold rounded-xl disabled:opacity-40 active:opacity-80 transition-opacity"
+                  >
+                    Save changes
+                  </button>
+                </div>
 
                 {/* ── Password ── */}
                 <SectionHeader title="Change password" />
-                <EInput label="Current password" value={pw.current}
-                  onChange={(v) => { setPw((p) => ({ ...p, current: v })); setPwSaved(false); setPwError('') }}
-                  type="password" placeholder="Enter current password" />
+                <div>
+                  <EInput label="Current password" value={pw.current}
+                    onChange={(v) => { setPw((p) => ({ ...p, current: v })); setPwSaved(false); setPwError(''); setPwResetMsg(false) }}
+                    type="password" placeholder="Enter current password" />
+                  <button
+                    onClick={() => { setPwResetMsg(true); setPwError('') }}
+                    className="text-pace-green text-xs mt-1.5 underline underline-offset-2"
+                  >
+                    Forgot your password?
+                  </button>
+                  {pwResetMsg && <p className="text-pace-muted text-xs mt-1">A reset link would be sent to {editForm.email || user.email}.</p>}
+                </div>
                 <EInput label="New password" value={pw.next}
                   onChange={(v) => { setPw((p) => ({ ...p, next: v })); setPwSaved(false); setPwError('') }}
                   type="password" placeholder="At least 8 characters" />
@@ -411,6 +424,7 @@ export default function Profile() {
 
                 <div className="pb-6" />
               </div>
+
             </motion.div>
           </>
         )}

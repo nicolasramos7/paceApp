@@ -5,11 +5,8 @@ export default function Welcome() {
   const navigate = useNavigate()
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-pace-bg px-8 text-center">
-      <div className="w-16 h-16 bg-pace-green rounded-3xl flex items-center justify-center mb-6 shadow-card">
-        <span className="text-white text-2xl font-bold">p</span>
-      </div>
-      <h1 className="text-3xl font-bold text-pace-text mb-3">pace</h1>
+    <div className="flex flex-col items-center justify-center h-full bg-pace-bg px-8 text-center pb-24">
+      <img src="/pace_logo_transparent.png" alt="pace" className="h-44 mb-8 object-contain" />
       <p className="text-pace-secondary text-base leading-relaxed mb-2">
         A lightweight life rhythm tracker that helps you build healthier routines and meaningful shared experiences.
       </p>
