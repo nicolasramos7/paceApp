@@ -50,7 +50,7 @@ export const LANGUAGES = [
 
 export const INTERESTS = {
   Active:        ['Walking','Hiking','Gym','Running','Sports','Yoga','Cycling'],
-  Creative:      ['Music','Art','Photography','Writing','Crafts','Cooking'],
+  Creative:      ['Music','Art','Photography','Writing','Crafts','Cooking','Baking'],
   Entertainment: ['Movies','TV series','Video games','Board games','Anime'],
   Intellectual:  ['Books','Learning','Languages','Museums','Technology'],
   Social:        ['Coffee chats','Eating out','Volunteering','Exploring town','Local events'],
