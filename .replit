@@ -1,0 +1,13 @@
+run = "cd pace && npm install && npm run dev"
+
+[nix]
+channel = "stable-24_05"
+
+[[ports]]
+localPort = 5173
+externalPort = 80
+
+[deployment]
+deploymentTarget = "static"
+build = ["sh", "-c", "cd pace && npm install && npm run build"]
+publicDir = "pace/dist"

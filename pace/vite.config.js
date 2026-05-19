@@ -63,4 +63,7 @@ function demoParticipantsPlugin() {
 
 export default defineConfig({
   plugins: [react(), demoParticipantsPlugin()],
+  server: {
+    host: true,
+  },
 })
