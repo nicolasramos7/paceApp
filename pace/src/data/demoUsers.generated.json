@@ -1,1 +1,60 @@
-[]
+[
+  {
+    "id": "user_1779179973110",
+    "name": "Test User",
+    "age": 18,
+    "zipCode": "2636",
+    "town": "",
+    "country": "Netherlands",
+    "gender": "Female",
+    "occupation": "",
+    "interests": [],
+    "avatar": "TU",
+    "color": "#7DC9A0",
+    "dailyLogs": [
+      {
+        "date": "2026-05-19",
+        "wouldveLiked": [
+          "Baking cookies"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "user_1779135490803",
+    "name": "user1",
+    "age": 18,
+    "zipCode": "34949",
+    "town": "Barcelona",
+    "country": "Spain",
+    "gender": "Female",
+    "occupation": "Student",
+    "interests": [
+      "Sports"
+    ],
+    "avatar": "U",
+    "color": "#9B8ECD",
+    "dailyLogs": [
+      {
+        "date": "2026-05-18",
+        "outsideTime": "long",
+        "sleep": "low",
+        "movement": "outside",
+        "insight": "Even quiet days have their own rhythm. Small habits build over time.",
+        "suggestion": "Tomorrow, try carrying that movement into something shared — even a short walk with someone nearby.",
+        "activityBalance": {
+          "physical": 75,
+          "social": 15,
+          "rest": 30,
+          "nutrition": 20,
+          "productivity": 25
+        },
+        "socialFulfillment": 18,
+        "aiTags": [
+          "day tracked"
+        ],
+        "wouldveLiked": []
+      }
+    ]
+  }
+]
