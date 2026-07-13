@@ -104,4 +104,4 @@ Pace was built during a hackathon by a team of 3, with the goal of using AI to h
 **Team members:**
 - Jaume Ferrer
 - Davide Merlotti
-- Nico Ramos (me)
+- Nico Ramos
